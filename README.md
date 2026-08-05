@@ -1,6 +1,6 @@
 # Image Quality Advisor
 
-Turns Google Document AI `detectedDefects` confidence values into a publish decision, prioritized repairs, and an image-type-specific delivery checklist.
+An upload-first image reviewer grounded in the supplied HSD Featured/Headline and Inline Image SOPs. Images are analyzed locally in the browser and are never uploaded to a server.
 
 Supported defects: blurry, noisy, dark, faint, text too small, document cutoff, text cutoff, and glare.
 
@@ -12,9 +12,12 @@ npm start
 
 Open `http://localhost:4174`.
 
-## Input
+## Review inputs
 
-Paste a complete or partial Document AI JSON response—the parser recursively finds supported `{type, confidence}` objects—or set the eight confidence sliders manually.
+- Upload PNG, JPEG, WebP, or AVIF.
+- Automatic checks cover dimensions, aspect ratio, brightness, contrast, sharpness, visual noise, clipped highlights, format, and file weight.
+- Optionally paste a complete or partial Document AI JSON response. The parser recursively finds supported `{type, confidence}` objects and uses API scores alongside local estimates.
+- Review the visible Featured and Inline SOP tabs for semantic, brand, metadata, copy, and delivery checks that cannot be inferred safely from pixels.
 
 ## Thresholds
 
