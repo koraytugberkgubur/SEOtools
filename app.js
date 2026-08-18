@@ -4,22 +4,18 @@ const state = {
   tokenClient: null,
   selected: null,
   category: "All",
-  pageScope: "all",
-  wordGroup: "all",
-  wordGroups: null,
-  wordGroupSignature: null,
+  topic: "all",
+  baseRows: [],
+  fields: [],
+  resultStats: null,
   rows: [],
 };
 
-const PAGE_SCOPES = [
-  { id: "all", label: "All pages", summary: "Every URL in the export", path: null },
-  { id: "anagram", label: "/anagram/*", summary: "Only URLs inside the /anagram folder", path: "/anagram" },
-];
-
-const WORD_GROUPS = [
-  { id: "all", label: "All anagram words" },
-  { id: "dictionary", label: "Dictionary words" },
-  { id: "nonDictionary", label: "Non-dictionary words" },
+const TOPICS = [
+  { id: "all", label: "All opportunities", summary: "Keep the query's original ranking", terms: [] },
+  { id: "3d-printing", label: "3D printing", summary: "Surface additive-manufacturing demand first", terms: ["3d print", "3d printing", "additive manufacturing", "fdm", "sla", "sls", "dmls", "polyjet"] },
+  { id: "manufacturing", label: "Manufacturing", summary: "Prioritize production and machining intent", terms: ["manufacturing", "manufacturer", "cnc", "machining", "injection molding", "sheet metal", "die casting", "casting"] },
+  { id: "laser", label: "Laser", summary: "Bring laser processes and services to the top", terms: ["laser", "laser cutting", "laser cut", "laser engraving", "laser marking", "fiber laser", "co2 laser"] },
 ];
 
 const $ = (selector) => document.querySelector(selector);
@@ -28,8 +24,7 @@ const elements = {
   dataset: $("#dataset"), tableName: $("#tableName"), inspectionTable: $("#inspectionTable"),
   connectButton: $("#connectButton"), disconnectButton: $("#disconnectButton"), connectionChip: $("#connectionChip"),
   querySearch: $("#querySearch"), categoryTabs: $("#categoryTabs"), queryGrid: $("#queryGrid"),
-  pageScopeTabs: $("#pageScopeTabs"), pageScopeSummary: $("#pageScopeSummary"),
-  wordScope: $("#wordScope"), wordScopeTabs: $("#wordScopeTabs"),
+  topicTabs: $("#topicTabs"), topicSummary: $("#topicSummary"),
   resultStatus: $("#resultStatus"), resultTitle: $("#resultTitle"), queryDetail: $("#queryDetail"),
   copySqlButton: $("#copySqlButton"), dryRunButton: $("#dryRunButton"), runQueryButton: $("#runQueryButton"),
   downloadFullButton: $("#downloadFullButton"),
@@ -63,49 +58,24 @@ function validateIdentifier(value, label) {
   if (!/^[A-Za-z0-9_:\-.]+$/.test(value)) throw new Error(`${label} contains an unsupported character.`);
 }
 
-function validateConfig({ clientId, projectId, dataset, tableName }) {
+function validateConfig({ clientId, projectId, dataset, tableName, inspectionTable }) {
   if (!clientId || !clientId.endsWith(".apps.googleusercontent.com")) throw new Error("Enter a valid Google OAuth client ID.");
   if (!projectId || !dataset || !tableName) throw new Error("Project ID, dataset, and performance table are required.");
   validateIdentifier(projectId, "Project ID"); validateIdentifier(dataset, "Dataset"); validateIdentifier(tableName, "Table name");
+  if (inspectionTable) validateIdentifier(inspectionTable, "URL Inspection table");
 }
 
 function hydrateSql(query) {
   const config = getConfig();
   if (!config.projectId || !config.dataset || !config.tableName) throw new Error("Complete the BigQuery source fields first.");
-  [config.projectId, config.dataset, config.tableName].forEach((value, index) => validateIdentifier(value, ["Project ID", "Dataset", "Table name"][index]));
+  [config.projectId, config.dataset, config.tableName, config.inspectionTable || "url_inspection"].forEach((value, index) => validateIdentifier(value, ["Project ID", "Dataset", "Table name", "URL Inspection table"][index]));
   const table = `${config.projectId}.${config.dataset}.${config.tableName}`;
   const inspection = `${config.projectId}.${config.dataset}.${config.inspectionTable || "url_inspection"}`;
-  const scope = PAGE_SCOPES.find((item) => item.id === state.pageScope) || PAGE_SCOPES[0];
-  const scopedSource = (source) => {
-    if (!scope.path) return `\`${source}\``;
-    let wordCondition = "";
-    if (state.wordGroup !== "all") {
-      const slugs = state.wordGroups?.[state.wordGroup];
-      if (!slugs) throw new Error("Connect Google to classify the /anagram words before generating this SQL.");
-      const slugExpression = "LOWER(REGEXP_EXTRACT(url, r'^https?://[^/]+/anagram/([^/?#]+)'))";
-      wordCondition = slugs.length ? ` AND ${slugExpression} IN UNNEST(@selected_slugs)` : " AND FALSE";
-    }
-    return `(SELECT * FROM \`${source}\` WHERE REGEXP_CONTAINS(url, r'^https?://[^/]+${scope.path}(?:/|$)')${wordCondition})`;
-  };
   return query.sql
-    .replaceAll("`{{TABLE}}`", scopedSource(table))
-    .replaceAll("`{{INSPECTION_TABLE}}`", scopedSource(inspection))
+    .replaceAll("`{{TABLE}}`", `\`${table}\``)
+    .replaceAll("`{{INSPECTION_TABLE}}`", `\`${inspection}\``)
     .replaceAll("{{TABLE}}", table)
     .replaceAll("{{INSPECTION_TABLE}}", inspection);
-}
-
-function getQueryParameters() {
-  if (state.pageScope !== "anagram" || state.wordGroup === "all") return {};
-  const slugs = state.wordGroups?.[state.wordGroup] || [];
-  if (!slugs.length) return {};
-  return {
-    parameterMode: "NAMED",
-    queryParameters: [{
-      name: "selected_slugs",
-      parameterType: { type: "ARRAY", arrayType: { type: "STRING" } },
-      parameterValue: { arrayValues: slugs.map((value) => ({ value })) },
-    }],
-  };
 }
 
 async function collectQueryPages(payload, config, onProgress) {
@@ -181,60 +151,13 @@ function renderCategories() {
   elements.categoryTabs.innerHTML = categories.map((category) => `<button class="category-tab${state.category === category ? " active" : ""}" data-category="${category}" role="tab" aria-selected="${state.category === category}">${category}</button>`).join("");
 }
 
-function renderPageScopes() {
-  const current = PAGE_SCOPES.find((scope) => scope.id === state.pageScope) || PAGE_SCOPES[0];
-  elements.pageScopeSummary.textContent = current.summary;
-  elements.pageScopeTabs.innerHTML = PAGE_SCOPES.map((scope) => `
-    <button class="page-scope-tab${scope.id === state.pageScope ? " active" : ""}" data-page-scope="${scope.id}" role="tab" aria-selected="${scope.id === state.pageScope}">
-      <span>${scope.label}</span>${scope.path ? '<i>Folder filter on</i>' : '<i>No path filter</i>'}
+function renderTopics() {
+  const current = TOPICS.find((topic) => topic.id === state.topic) || TOPICS[0];
+  elements.topicSummary.textContent = current.summary;
+  elements.topicTabs.innerHTML = TOPICS.map((topic) => `
+    <button class="topic-tab${topic.id === state.topic ? " active" : ""}" data-topic="${topic.id}" role="tab" aria-selected="${topic.id === state.topic}">
+      <span>${topic.label}</span><i>${topic.id === "all" ? "Original order" : `${topic.terms.length} intent signals`}</i>
     </button>`).join("");
-}
-
-function renderWordGroups() {
-  elements.wordScope.hidden = state.pageScope !== "anagram";
-  elements.wordScopeTabs.innerHTML = WORD_GROUPS.map((group) => `
-    <button class="word-scope-tab${group.id === state.wordGroup ? " active" : ""}" data-word-group="${group.id}" role="tab" aria-selected="${group.id === state.wordGroup}">${group.label}</button>`).join("");
-}
-
-function configSignature() {
-  const config = getConfig();
-  return `${config.projectId}.${config.dataset}.${config.tableName}`;
-}
-
-async function prepareWordGroups() {
-  if (state.pageScope !== "anagram" || state.wordGroup === "all") return;
-  const config = getConfig();
-  validateConfig(config);
-  const signature = configSignature();
-  if (state.wordGroups && state.wordGroupSignature === signature) return;
-  if (!window.ENGLISH_DICTIONARY) throw new Error("The English dictionary could not be loaded.");
-
-  elements.resultStatus.textContent = "Classifying /anagram words…";
-  const table = `${config.projectId}.${config.dataset}.${config.tableName}`;
-  const query = `
-    SELECT DISTINCT LOWER(REGEXP_EXTRACT(url, r'^https?://[^/]+/anagram/([^/?#]+)')) AS slug
-    FROM \`${table}\`
-    WHERE REGEXP_CONTAINS(url, r'^https?://[^/]+/anagram(?:/|$)')`;
-  let payload = await authorizedFetch(`https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(config.projectId)}/queries`, {
-    method: "POST",
-    body: JSON.stringify({ query, useLegacySql: false, location: config.location, maxResults: QUERY_PAGE_SIZE, timeoutMs: 20000 }),
-  });
-  while (!payload.jobComplete) {
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    payload = await authorizedFetch(`https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(config.projectId)}/queries/${encodeURIComponent(payload.jobReference.jobId)}?location=${encodeURIComponent(config.location)}&maxResults=${QUERY_PAGE_SIZE}`);
-  }
-  payload = await collectQueryPages(payload, config);
-  const slugs = (payload.rows || []).map((row) => String(row.f?.[0]?.v || "").toLowerCase()).filter(Boolean);
-  const isDictionaryWord = (slug) => {
-    try { return /^[a-z]+$/.test(decodeURIComponent(slug)) && window.ENGLISH_DICTIONARY.has(decodeURIComponent(slug)); }
-    catch { return false; }
-  };
-  state.wordGroups = {
-    dictionary: slugs.filter(isDictionaryWord),
-    nonDictionary: slugs.filter((slug) => !isDictionaryWord(slug)),
-  };
-  state.wordGroupSignature = signature;
-  showToast(`Classified ${slugs.length.toLocaleString()} anagram URLs: ${state.wordGroups.dictionary.length.toLocaleString()} dictionary words, ${state.wordGroups.nonDictionary.length.toLocaleString()} non-dictionary words.`);
 }
 
 function renderQueries() {
@@ -249,6 +172,7 @@ function renderQueries() {
 
 function selectQuery(id) {
   state.selected = catalog.find((query) => query.id === id);
+  state.baseRows = [];
   state.rows = [];
   elements.downloadFullButton.disabled = true;
   renderQueries();
@@ -257,8 +181,8 @@ function selectQuery(id) {
 
 function renderSelectedQuery(scroll = true) {
   elements.resultTitle.textContent = state.selected.title;
-  const scope = PAGE_SCOPES.find((item) => item.id === state.pageScope) || PAGE_SCOPES[0];
-  elements.resultStatus.textContent = `${state.selected.category} · ${scope.label}`;
+  const topic = TOPICS.find((item) => item.id === state.topic) || TOPICS[0];
+  elements.resultStatus.textContent = `${state.selected.category} · ${topic.label}`;
   let sql = "";
   try { sql = hydrateSql(state.selected); } catch (error) { sql = `-- ${error.message}\n-- Connect Google, then use Copy SQL, Estimate cost, or Run query to prepare this filter.`; }
   elements.queryDetail.innerHTML = `
@@ -280,11 +204,10 @@ async function dryRun() {
   if (!state.selected) return;
   const config = getConfig();
   try {
-    await prepareWordGroups();
     elements.dryRunButton.disabled = true; elements.resultStatus.textContent = "Estimating bytes…";
     const payload = await authorizedFetch(`https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(config.projectId)}/jobs`, {
       method: "POST",
-      body: JSON.stringify({ jobReference: { projectId: config.projectId, location: config.location }, configuration: { dryRun: true, query: { query: hydrateSql(state.selected), useLegacySql: false, ...getQueryParameters() } } }),
+      body: JSON.stringify({ jobReference: { projectId: config.projectId, location: config.location }, configuration: { dryRun: true, query: { query: hydrateSql(state.selected), useLegacySql: false } } }),
     });
     const bytes = Number(payload.statistics?.totalBytesProcessed || 0);
     elements.resultStatus.textContent = "Cost estimate ready";
@@ -298,7 +221,6 @@ async function runQuery() {
   const config = getConfig();
   try {
     validateConfig(config); saveConfig();
-    await prepareWordGroups();
     elements.runQueryButton.disabled = true; elements.dryRunButton.disabled = true;
     elements.downloadFullButton.disabled = true; state.rows = [];
     elements.resultStatus.textContent = "Running in BigQuery…";
@@ -306,7 +228,7 @@ async function runQuery() {
     elements.emptyState.innerHTML = '<div class="empty-glyph">RUN<br />•••</div><p>BigQuery is processing the selected shortcut.</p>';
     let payload = await authorizedFetch(`https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(config.projectId)}/queries`, {
       method: "POST",
-      body: JSON.stringify({ query: hydrateSql(state.selected), useLegacySql: false, ...getQueryParameters(), location: config.location, maxResults: QUERY_PAGE_SIZE, timeoutMs: 20000 }),
+      body: JSON.stringify({ query: hydrateSql(state.selected), useLegacySql: false, location: config.location, maxResults: QUERY_PAGE_SIZE, timeoutMs: 20000 }),
     });
     while (!payload.jobComplete) {
       await new Promise((resolve) => setTimeout(resolve, 1100));
@@ -330,11 +252,49 @@ async function runQuery() {
 function renderResult(payload) {
   const fields = payload.schema?.fields || [];
   const rows = payload.rows || [];
-  state.rows = rows.map((row) => Object.fromEntries(fields.map((field, index) => [field.name, normalizeCell(row.f?.[index]?.v)])));
+  state.fields = fields;
+  state.baseRows = rows.map((row) => Object.fromEntries(fields.map((field, index) => [field.name, normalizeCell(row.f?.[index]?.v)])));
+  state.resultStats = {
+    totalBytesProcessed: Number(payload.totalBytesProcessed || 0),
+    cacheHit: Boolean(payload.cacheHit),
+  };
+  renderPrioritizedResult(true);
+}
+
+function normalizeMatchText(value) {
+  return String(formatCell(value) || "").toLowerCase().replace(/[_/\-]+/g, " ").replace(/\s+/g, " ");
+}
+
+function textMatchesTerm(value, term) {
+  const normalizedTerm = normalizeMatchText(term);
+  if (normalizedTerm.length > 4 || normalizedTerm.includes(" ")) return value.includes(normalizedTerm);
+  return new RegExp(`(?:^|\\s)${normalizedTerm}(?:$|\\s)`).test(value);
+}
+
+function topicMatchScore(row, topic) {
+  if (!topic.terms.length) return 0;
+  const priorityValues = Object.entries(row)
+    .filter(([key]) => /(url|page|query|keyword|search|term)/i.test(key))
+    .map(([, value]) => normalizeMatchText(value));
+  const fallbackValues = Object.values(row).map(normalizeMatchText);
+  return topic.terms.reduce((score, term) => {
+    if (priorityValues.some((value) => textMatchesTerm(value, term))) return score + 3;
+    if (fallbackValues.some((value) => textMatchesTerm(value, term))) return score + 1;
+    return score;
+  }, 0);
+}
+
+function renderPrioritizedResult(allowAutomaticDownload = false) {
+  const topic = TOPICS.find((item) => item.id === state.topic) || TOPICS[0];
+  const rankedRows = state.baseRows.map((row, originalIndex) => ({ row, originalIndex, score: topicMatchScore(row, topic) }));
+  if (topic.id !== "all") rankedRows.sort((a, b) => b.score - a.score || a.originalIndex - b.originalIndex);
+  state.rows = rankedRows.map(({ row }) => row);
+  const matchedRows = rankedRows.filter(({ score }) => score > 0).length;
+  const fields = state.fields;
   const visibleRows = state.rows.slice(0, RENDER_ROW_LIMIT);
-  elements.resultStatus.textContent = "Query complete";
+  elements.resultStatus.textContent = topic.id === "all" ? "Query complete" : `${topic.label} prioritized`;
   elements.resultMeta.hidden = false;
-  elements.resultMeta.innerHTML = `<span>${state.rows.length.toLocaleString()} rows downloaded</span><span>${visibleRows.length.toLocaleString()} displayed</span><span>${formatBytes(Number(payload.totalBytesProcessed || 0))} processed</span><span>${payload.cacheHit ? "cache hit" : "live execution"}</span>`;
+  elements.resultMeta.innerHTML = `<span>${state.rows.length.toLocaleString()} rows downloaded</span>${topic.id === "all" ? "" : `<span class="topic-match-meta">${matchedRows.toLocaleString()} ${escapeHtml(topic.label.toLowerCase())} matches ranked first</span>`}<span>${visibleRows.length.toLocaleString()} displayed</span><span>${formatBytes(state.resultStats?.totalBytesProcessed || 0)} processed</span><span>${state.resultStats?.cacheHit ? "cache hit" : "live execution"}</span>`;
   elements.downloadFullButton.disabled = !state.rows.length;
   elements.emptyState.hidden = true; elements.tableShell.hidden = false;
   if (!fields.length) {
@@ -342,8 +302,8 @@ function renderResult(payload) {
     elements.emptyState.innerHTML = '<div class="empty-glyph">DONE<br />0</div><p>The query completed but returned no rows.</p>';
     return;
   }
-  elements.resultsTable.innerHTML = `<thead><tr>${fields.map((field) => `<th>${escapeHtml(field.name)}</th>`).join("")}</tr></thead><tbody>${visibleRows.map((row) => `<tr>${fields.map((field) => `<td>${escapeHtml(formatCell(row[field.name]))}</td>`).join("")}</tr>`).join("")}</tbody>`;
-  if (state.rows.length > AUTO_DOWNLOAD_ROW_LIMIT) {
+  elements.resultsTable.innerHTML = `<thead><tr>${fields.map((field) => `<th>${escapeHtml(field.name)}</th>`).join("")}</tr></thead><tbody>${visibleRows.map((row) => `<tr class="${topicMatchScore(row, topic) > 0 ? "topic-match" : ""}">${fields.map((field) => `<td>${escapeHtml(formatCell(row[field.name]))}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  if (allowAutomaticDownload && state.rows.length > AUTO_DOWNLOAD_ROW_LIMIT) {
     window.setTimeout(() => downloadCsv(true), 0);
   }
 }
@@ -365,11 +325,14 @@ function formatBytes(bytes) {
 function downloadCsv(automatic = false) {
   if (!state.rows.length) return;
   const headers = Object.keys(state.rows[0]);
+  const csvSafe = (value) => {
+    const text = String(formatCell(value));
+    return /^[=+\-@]/.test(text) ? `'${text}` : text;
+  };
   const csv = [headers, ...state.rows.map((row) => headers.map((header) => row[header]))]
-    .map((row) => row.map((value) => `"${String(formatCell(value)).replaceAll('"', '""')}"`).join(",")).join("\n");
-  const scope = [state.pageScope, state.pageScope === "anagram" ? state.wordGroup : ""].filter(Boolean).join("-");
+    .map((row) => row.map((value) => `"${csvSafe(value).replaceAll('"', '""')}"`).join(",")).join("\n");
   const anchor = document.createElement("a"); anchor.href = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
-  anchor.download = `${state.selected.id}-${state.selected.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${scope}.csv`; anchor.click();
+  anchor.download = `${state.selected.id}-${state.selected.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${state.topic}.csv`; anchor.click();
   window.setTimeout(() => URL.revokeObjectURL(anchor.href), 1000);
   showToast(automatic ? `The ${state.rows.length.toLocaleString()}-row result was too large to render fully, so its CSV download started automatically.` : `Downloading all ${state.rows.length.toLocaleString()} rows.`);
 }
@@ -378,42 +341,27 @@ elements.connectButton.addEventListener("click", connectGoogle);
 elements.disconnectButton.addEventListener("click", disconnectGoogle);
 elements.configForm.addEventListener("change", () => {
   saveConfig();
-  state.wordGroups = null;
-  state.wordGroupSignature = null;
+  state.baseRows = [];
   state.rows = [];
   elements.downloadFullButton.disabled = true;
   if (state.selected) renderSelectedQuery(false);
 });
 elements.categoryTabs.addEventListener("click", (event) => { const button = event.target.closest("[data-category]"); if (!button) return; state.category = button.dataset.category; renderCategories(); renderQueries(); });
-elements.pageScopeTabs.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-page-scope]");
+elements.topicTabs.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-topic]");
   if (!button) return;
-  state.pageScope = button.dataset.pageScope;
-  state.rows = [];
-  elements.downloadFullButton.disabled = true;
-  renderPageScopes();
-  renderWordGroups();
-  if (state.selected) renderSelectedQuery(false);
-  showToast(state.pageScope === "anagram" ? "Page group set to /anagram/*." : "Page group filter removed.");
-});
-elements.wordScopeTabs.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-word-group]");
-  if (!button) return;
-  state.wordGroup = button.dataset.wordGroup;
-  state.rows = [];
-  elements.downloadFullButton.disabled = true;
-  renderWordGroups();
-  try {
-    if (state.token) await prepareWordGroups();
-    if (state.selected) renderSelectedQuery(false);
-    showToast(`Anagram filter set to ${WORD_GROUPS.find((group) => group.id === state.wordGroup).label.toLowerCase()}.`);
-  } catch (error) { showToast(error.message, true); }
+  state.topic = button.dataset.topic;
+  renderTopics();
+  if (state.baseRows.length) renderPrioritizedResult(false);
+  else if (state.selected) renderSelectedQuery(false);
+  const topic = TOPICS.find((item) => item.id === state.topic);
+  showToast(topic.id === "all" ? "Original result order restored." : `${topic.label} matches will rank first.`);
 });
 elements.queryGrid.addEventListener("click", (event) => { const card = event.target.closest("[data-id]"); if (card) selectQuery(card.dataset.id); });
 elements.querySearch.addEventListener("input", renderQueries);
-elements.copySqlButton.addEventListener("click", async () => { try { await prepareWordGroups(); const parameterNote = Object.keys(getQueryParameters()).length ? "-- Uses the named ARRAY<STRING> parameter @selected_slugs, populated by this tool.\n" : ""; await navigator.clipboard.writeText(parameterNote + hydrateSql(state.selected)); renderSelectedQuery(false); showToast("SQL copied."); } catch (error) { showToast(error.message, true); } });
+elements.copySqlButton.addEventListener("click", async () => { try { await navigator.clipboard.writeText(hydrateSql(state.selected)); renderSelectedQuery(false); showToast("SQL copied."); } catch (error) { showToast(error.message, true); } });
 elements.dryRunButton.addEventListener("click", dryRun);
 elements.runQueryButton.addEventListener("click", runQuery);
 elements.downloadFullButton.addEventListener("click", () => downloadCsv(false));
 
-loadConfig(); renderPageScopes(); renderWordGroups(); renderCategories(); renderQueries(); setConnected(false);
+loadConfig(); renderTopics(); renderCategories(); renderQueries(); setConnected(false);

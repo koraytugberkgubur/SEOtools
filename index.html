@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Run reusable Google Search Console BigQuery analyses from your browser." />
+    <meta name="description" content="Prioritize 3D printing, manufacturing, and laser opportunities in Google Search Console BigQuery data." />
     <meta name="theme-color" content="#0c3b5d" />
-    <title>GSC BigQuery Shortcuts</title>
+    <title>Xometry GSC Opportunity Shortcuts</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap" rel="stylesheet" />
@@ -15,9 +15,9 @@
   <body>
     <div class="grain" aria-hidden="true"></div>
     <header class="masthead">
-      <a class="wordmark" href="#top" aria-label="GSC BigQuery Shortcuts home">
+      <a class="wordmark" href="#top" aria-label="Xometry GSC Opportunity Shortcuts home">
         <span class="wordmark-mark">BQ</span>
-        <span>GSC shortcuts</span>
+        <span>Xometry opportunity desk</span>
       </a>
       <div class="connection-chip" id="connectionChip"><span></span> Not connected</div>
     </header>
@@ -25,9 +25,9 @@
     <main id="top">
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">17 field-tested queries · one browser workspace</p>
-          <h1>Ask Search Console<br /><em>better questions.</em></h1>
-          <p class="hero-intro">Connect your Google account, point at the Search Console bulk export, and run the analysis without rebuilding SQL every week.</p>
+          <p class="eyebrow">17 field-tested queries · industrial intent prioritized</p>
+          <h1>Find the demand<br /><em>closest to production.</em></h1>
+          <p class="hero-intro">Run reusable Search Console analyses, then bring 3D printing, manufacturing, and laser opportunities to the top with one click.</p>
         </div>
         <div class="signal-map" aria-label="A diagram showing Search Console data flowing through BigQuery into a results table">
           <div class="signal-node source"><span>01</span>GSC export</div>
@@ -38,7 +38,7 @@
             <circle cx="91" cy="33" r="4" /><circle cx="91" cy="83" r="4" /><circle cx="91" cy="132" r="4" />
             <circle cx="278" cy="33" r="4" /><circle cx="278" cy="83" r="4" /><circle cx="278" cy="132" r="4" />
           </svg>
-          <div class="signal-node destination"><span>17</span>Decisions</div>
+          <div class="signal-node destination"><span>03</span>Processes</div>
         </div>
       </section>
 
@@ -100,19 +100,12 @@
               <input id="querySearch" type="search" placeholder="Filter 17 shortcuts…" />
             </label>
           </div>
-          <div class="page-scope" aria-labelledby="pageScopeLabel">
+          <div class="page-scope topic-priority" aria-labelledby="topicLabel">
             <div class="page-scope-copy">
-              <span class="eyebrow" id="pageScopeLabel">Page group</span>
-              <strong id="pageScopeSummary">Every URL in the export</strong>
+              <span class="eyebrow" id="topicLabel">Priority lens</span>
+              <strong id="topicSummary">Keep the query's original ranking</strong>
             </div>
-            <div class="page-scope-tabs" id="pageScopeTabs" role="tablist" aria-label="Limit every query to a page group"></div>
-          </div>
-          <div class="word-scope" id="wordScope" hidden aria-labelledby="wordScopeLabel">
-            <div>
-              <span class="eyebrow" id="wordScopeLabel">Anagram word status</span>
-              <p>Classified from the word in <code>/anagram/[word]</code>.</p>
-            </div>
-            <div class="word-scope-tabs" id="wordScopeTabs" role="tablist" aria-label="Filter anagram URLs by dictionary status"></div>
+            <div class="page-scope-tabs topic-tabs" id="topicTabs" role="tablist" aria-label="Prioritize results by industrial topic"></div>
           </div>
           <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Query categories"></div>
           <div class="query-grid" id="queryGrid"></div>
@@ -147,8 +140,7 @@
     </main>
 
     <div class="toast" id="toast" role="status"></div>
-    <script src="dictionary.js?v=61cd5ce"></script>
-    <script src="queries.js?v=61cd5ce"></script>
-    <script src="app.js?v=61cd5ce"></script>
+    <script src="queries.js?v=xometry-1"></script>
+    <script src="app.js?v=xometry-1"></script>
   </body>
 </html>
