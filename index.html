@@ -3,21 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Run legal-sector Google Search Console BigQuery analyses for practice areas, locations, attorneys, and insights." />
-    <meta name="theme-color" content="#0c3b5d" />
-    <title>Legal GSC BigQuery Shortcuts</title>
+    <meta name="description" content="Run allergy-industry Google Search Console BigQuery analyses for allergy types, symptoms, tests, treatments, cities, and doctors." />
+    <meta name="theme-color" content="#075f62" />
+    <title>Allergy GSC BigQuery Shortcuts</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=quick-filters-v1" />
+    <link rel="stylesheet" href="styles.css?v=allergy-v1" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <div class="grain" aria-hidden="true"></div>
     <header class="masthead">
-      <a class="wordmark" href="#top" aria-label="Legal GSC BigQuery Shortcuts home">
-        <span class="wordmark-mark">BQ</span>
-        <span>Legal GSC shortcuts</span>
+      <a class="wordmark" href="#top" aria-label="Allergy GSC BigQuery Shortcuts home">
+        <span class="wordmark-mark">A·Q</span>
+        <span>Allergy GSC shortcuts</span>
       </a>
       <div class="connection-chip" id="connectionChip"><span></span> Not connected</div>
     </header>
@@ -25,12 +25,12 @@
     <main id="top">
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">17 legal SEO queries · one browser workspace</p>
-          <h1>Find legal search<br /><em>growth opportunities.</em></h1>
-          <p class="hero-intro">Connect your Google account, select your Search Console bulk export, and analyze practice areas, locations, attorneys, and legal insights without rebuilding SQL.</p>
+          <p class="eyebrow">17 reusable analyses · allergy URL intelligence</p>
+          <h1>Trace allergy search<br /><em>visibility.</em></h1>
+          <p class="hero-intro">Connect your Search Console bulk export and isolate allergy types, symptoms, treatments, city pages, and doctor profiles without rebuilding SQL.</p>
         </div>
         <div class="signal-map" aria-label="A diagram showing Search Console data flowing through BigQuery into a results table">
-          <div class="signal-node source"><span>01</span>GSC export</div>
+          <div class="signal-node source"><span>Pollen · food · pet</span>GSC export</div>
           <svg viewBox="0 0 420 165" role="img" aria-hidden="true">
             <path d="M88 33 C190 33, 164 132, 278 132" />
             <path d="M88 83 C171 83, 195 83, 278 83" />
@@ -38,7 +38,7 @@
             <circle cx="91" cy="33" r="4" /><circle cx="91" cy="83" r="4" /><circle cx="91" cy="132" r="4" />
             <circle cx="278" cy="33" r="4" /><circle cx="278" cy="83" r="4" /><circle cx="278" cy="132" r="4" />
           </svg>
-          <div class="signal-node destination"><span>17</span>Legal insights</div>
+          <div class="signal-node destination"><span>17 analyses</span>Search signals</div>
         </div>
       </section>
 
@@ -103,9 +103,14 @@
           <div class="page-scope" aria-labelledby="pageScopeLabel">
             <div class="page-scope-copy">
               <span class="eyebrow" id="pageScopeLabel">Page group</span>
-              <strong id="pageScopeSummary">Every legal-services URL in the export</strong>
+              <strong id="pageScopeSummary">Every allergy-health URL in the export</strong>
             </div>
             <div class="page-scope-tabs" id="pageScopeTabs" role="tablist" aria-label="Limit every query to a page group"></div>
+          </div>
+          <div class="custom-scope-editor" id="customScopeEditor" hidden>
+            <label for="customScopeRegex">Custom page-group regex</label>
+            <input id="customScopeRegex" type="text" placeholder="e.g. /(?:allergy-types|locations|doctors)/" spellcheck="false" />
+            <small>Matched case-insensitively against the full URL and stacked with the filters below.</small>
           </div>
           <details class="data-filters" id="dataFilters">
             <summary>
@@ -119,9 +124,12 @@
                   <select id="pageFilterMode" aria-label="Page URL matching rule">
                     <option value="contains">contains</option>
                     <option value="excludes">does not contain</option>
+                    <option value="starts">starts with</option>
+                    <option value="ends">ends with</option>
+                    <option value="exact">exactly matches</option>
                     <option value="regex">matches regex</option>
                   </select>
-                  <input id="pageFilter" type="text" placeholder="e.g. /services/divorce" spellcheck="false" />
+                  <input id="pageFilter" type="text" placeholder="e.g. /pages/katzenallergie" spellcheck="false" />
                 </div>
                 <small>Applied after the selected page-group preset.</small>
                 <div class="quick-filters" id="pageQuickFilters" aria-label="Quick page URL filters"></div>
@@ -132,9 +140,12 @@
                   <select id="queryFilterMode" aria-label="Search query matching rule">
                     <option value="contains">contains</option>
                     <option value="excludes">does not contain</option>
+                    <option value="starts">starts with</option>
+                    <option value="ends">ends with</option>
+                    <option value="exact">exactly matches</option>
                     <option value="regex">matches regex</option>
                   </select>
-                  <input id="queryFilter" type="text" placeholder="e.g. lawyer near me" spellcheck="false" />
+                  <input id="queryFilter" type="text" placeholder="e.g. allergist near me" spellcheck="false" />
                 </div>
                 <small>Only applies to the performance table; matching is case-insensitive.</small>
                 <div class="quick-filters" id="queryQuickFilters" aria-label="Quick search-query filters"></div>
@@ -174,7 +185,8 @@
     </main>
 
     <div class="toast" id="toast" role="status"></div>
-    <script src="queries.js?v=61cd5ce"></script>
-    <script src="app.js?v=quick-filters-v1"></script>
+    <script src="industry-config.js?v=allergy-v1"></script>
+    <script src="queries.js?v=allergy-v1"></script>
+    <script src="app.js?v=allergy-v1"></script>
   </body>
 </html>

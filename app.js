@@ -8,29 +8,9 @@ const state = {
   rows: [],
 };
 
-const PAGE_SCOPES = [
-  { id: "all", label: "All pages", summary: "Every legal-services URL in the export", pattern: null },
-  { id: "practice", label: "Practice areas", summary: "Only URLs inside /practice-areas", pattern: "/practice-areas" },
-  { id: "locations", label: "Locations", summary: "Only URLs inside /locations", pattern: "/locations" },
-  { id: "attorneys", label: "Attorneys", summary: "Only URLs inside /attorneys", pattern: "/attorneys" },
-  { id: "insights", label: "Insights", summary: "Only URLs inside /blog or /insights", pattern: "/(?:blog|insights)" },
-];
-
-const FILTER_PRESETS = {
-  page: [
-    { id: "homepage", label: "Homepage", mode: "regex", value: "^https?://[^/]+/?(?:[?#].*)?$" },
-    { id: "parameters", label: "Has parameters", mode: "regex", value: "[?&][^=]+=" },
-    { id: "deep", label: "Deep paths", mode: "regex", value: "^https?://[^/]+/(?:[^/?#]+/){2,}[^/?#]*/?$" },
-    { id: "pdf", label: "PDF files", mode: "regex", value: "\\.pdf(?:[?#]|$)" },
-  ],
-  query: [
-    { id: "questions", label: "Questions", mode: "regex", value: "^(who|what|when|where|why|how|can|could|should|is|are|do|does)\\b" },
-    { id: "local", label: "Local intent", mode: "regex", value: "\\b(near me|nearby|in my area)\\b" },
-    { id: "cost", label: "Costs & fees", mode: "regex", value: "\\b(cost|costs|fee|fees|price|pricing|how much)\\b" },
-    { id: "lawyer", label: "Lawyer intent", mode: "regex", value: "\\b(lawyer|attorney|law firm|legal counsel)\\b" },
-    { id: "long-tail", label: "Long-tail 5+", mode: "regex", value: "^\\S+(?:\\s+\\S+){4,}$" },
-  ],
-};
+const industryConfig = window.INDUSTRY_CONFIG || { pageScopes: [], filterPresets: { page: [], query: [] } };
+const PAGE_SCOPES = industryConfig.pageScopes;
+const FILTER_PRESETS = industryConfig.filterPresets;
 
 const $ = (selector) => document.querySelector(selector);
 const elements = {
@@ -39,6 +19,7 @@ const elements = {
   connectButton: $("#connectButton"), disconnectButton: $("#disconnectButton"), connectionChip: $("#connectionChip"),
   querySearch: $("#querySearch"), categoryTabs: $("#categoryTabs"), queryGrid: $("#queryGrid"),
   pageScopeTabs: $("#pageScopeTabs"), pageScopeSummary: $("#pageScopeSummary"),
+  customScopeEditor: $("#customScopeEditor"), customScopeRegex: $("#customScopeRegex"),
   dataFilters: $("#dataFilters"), pageFilter: $("#pageFilter"), pageFilterMode: $("#pageFilterMode"),
   queryFilter: $("#queryFilter"), queryFilterMode: $("#queryFilterMode"), filterSummary: $("#filterSummary"), activeFilterCount: $("#activeFilterCount"),
   pageQuickFilters: $("#pageQuickFilters"), queryQuickFilters: $("#queryQuickFilters"),
@@ -48,16 +29,17 @@ const elements = {
   resultMeta: $("#resultMeta"), tableShell: $("#tableShell"), resultsTable: $("#resultsTable"), emptyState: $("#emptyState"), toast: $("#toast"),
 };
 
-const STORAGE_KEY = "gsc-bq-shortcuts-config-v1";
+const STORAGE_KEY = "gsc-bq-allergy-shortcuts-config-v1";
 const RENDER_ROW_LIMIT = 1000;
 const AUTO_DOWNLOAD_ROW_LIMIT = 5000;
 const QUERY_PAGE_SIZE = 10000;
-const configFields = ["clientId", "projectId", "location", "dataset", "tableName", "inspectionTable", "pageFilter", "pageFilterMode", "queryFilter", "queryFilterMode"];
+const configFields = ["clientId", "projectId", "location", "dataset", "tableName", "inspectionTable", "customScopeRegex", "pageFilter", "pageFilterMode", "queryFilter", "queryFilterMode"];
 
 function loadConfig() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     configFields.forEach((key) => { if (saved[key]) elements[key].value = saved[key]; });
+    if (PAGE_SCOPES.some((scope) => scope.id === saved.pageScope)) state.pageScope = saved.pageScope;
   } catch { /* ignore malformed local settings */ }
 }
 
@@ -68,7 +50,7 @@ function getConfig() {
 }
 
 function saveConfig() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(getConfig()));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...getConfig(), pageScope: state.pageScope }));
 }
 
 function validateIdentifier(value, label) {
@@ -91,7 +73,8 @@ function hydrateSql(query) {
   const filters = getFilters();
   const scopedSource = (source, queryAware = false) => {
     const predicates = [];
-    if (scope.pattern) predicates.push(`REGEXP_CONTAINS(url, r'^https?://[^/]+${scope.pattern}(?:/|$)')`);
+    if (scope.custom && config.customScopeRegex) predicates.push(filterPredicate("url", "scope_filter", "regex"));
+    else if (scope.pattern) predicates.push(`REGEXP_CONTAINS(url, r'(?i)^https?://[^/]+(?:${scope.pattern})')`);
     if (filters.page.value) predicates.push(filterPredicate("url", "page_filter", filters.page.mode));
     if (queryAware && filters.query.value) predicates.push(filterPredicate("query", "query_filter", filters.query.mode));
     if (!predicates.length) return `\`${source}\``;
@@ -113,6 +96,9 @@ function getFilters() {
 
 function filterPredicate(column, parameter, mode) {
   if (mode === "regex") return `REGEXP_CONTAINS(${column}, CONCAT('(?i)', @${parameter}))`;
+  if (mode === "exact") return `LOWER(${column}) = LOWER(@${parameter})`;
+  if (mode === "starts") return `STARTS_WITH(LOWER(${column}), LOWER(@${parameter}))`;
+  if (mode === "ends") return `ENDS_WITH(LOWER(${column}), LOWER(@${parameter}))`;
   const contains = `STRPOS(LOWER(${column}), LOWER(@${parameter})) > 0`;
   return mode === "excludes" ? `NOT (${contains})` : contains;
 }
@@ -124,27 +110,42 @@ function validateFilters() {
       try { new RegExp(filter.value); } catch { throw new Error(`The ${name} filter is not a valid regular expression.`); }
     }
   });
+  const scope = PAGE_SCOPES.find((item) => item.id === state.pageScope);
+  const customScopeRegex = elements.customScopeRegex.value.trim();
+  if (scope?.custom && customScopeRegex) {
+    try { new RegExp(customScopeRegex); } catch { throw new Error("The custom page-group regex is not valid."); }
+  }
   return filters;
 }
 
-function getQueryParameters() {
+function getNamedParameters() {
   const filters = validateFilters();
   const queryParameters = Object.entries(filters)
     .filter(([, filter]) => filter.value)
-    .map(([name, filter]) => ({ name: `${name}_filter`, parameterType: { type: "STRING" }, parameterValue: { value: filter.value } }));
+    .map(([name, filter]) => ({ name: `${name}_filter`, value: filter.value }));
+  const scope = PAGE_SCOPES.find((item) => item.id === state.pageScope);
+  const customScopeRegex = elements.customScopeRegex.value.trim();
+  if (scope?.custom && customScopeRegex) queryParameters.unshift({ name: "scope_filter", value: customScopeRegex });
+  return queryParameters;
+}
+
+function getQueryParameters() {
+  const queryParameters = getNamedParameters().map(({ name, value }) => ({
+    name,
+    parameterType: { type: "STRING" },
+    parameterValue: { value },
+  }));
   return queryParameters.length ? { parameterMode: "NAMED", queryParameters } : {};
 }
 
 function getPortableSql(query) {
-  const filters = validateFilters();
+  const parameters = getNamedParameters();
   let sql = hydrateSql(query);
   const declarations = [];
-  Object.entries(filters).forEach(([name, filter]) => {
-    if (!filter.value) return;
-    const parameter = `${name}_filter`;
-    const value = filter.value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
-    declarations.push(`DECLARE ${parameter} STRING DEFAULT '${value}';`);
-    sql = sql.replaceAll(`@${parameter}`, parameter);
+  parameters.forEach(({ name, value }) => {
+    const escapedValue = value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+    declarations.push(`DECLARE ${name} STRING DEFAULT '${escapedValue}';`);
+    sql = sql.replaceAll(`@${name}`, name);
   });
   return declarations.length ? `${declarations.join("\n")}\n\n${sql}` : sql;
 }
@@ -264,10 +265,12 @@ function renderCategories() {
 
 function renderPageScopes() {
   const current = PAGE_SCOPES.find((scope) => scope.id === state.pageScope) || PAGE_SCOPES[0];
-  elements.pageScopeSummary.textContent = current.summary;
+  const hasCustomPattern = elements.customScopeRegex.value.trim();
+  elements.pageScopeSummary.textContent = current.custom && !hasCustomPattern ? "Enter a regex to define this page group" : current.summary;
+  elements.customScopeEditor.hidden = !current.custom;
   elements.pageScopeTabs.innerHTML = PAGE_SCOPES.map((scope) => `
     <button class="page-scope-tab${scope.id === state.pageScope ? " active" : ""}" data-page-scope="${scope.id}" role="tab" aria-selected="${scope.id === state.pageScope}">
-      <span>${scope.label}</span>${scope.pattern ? '<i>Folder filter on</i>' : '<i>No path filter</i>'}
+      <span>${scope.label}</span><i>${scope.custom ? "Editable pattern" : scope.pattern ? "URL regex on" : "No URL filter"}</i>
     </button>`).join("");
 }
 
@@ -423,6 +426,7 @@ elements.pageScopeTabs.addEventListener("click", (event) => {
   const button = event.target.closest("[data-page-scope]");
   if (!button) return;
   state.pageScope = button.dataset.pageScope;
+  saveConfig();
   state.rows = [];
   elements.downloadFullButton.disabled = true;
   renderPageScopes();
@@ -433,6 +437,13 @@ elements.pageScopeTabs.addEventListener("click", (event) => {
 elements.queryGrid.addEventListener("click", (event) => { const card = event.target.closest("[data-id]"); if (card) selectQuery(card.dataset.id); });
 elements.querySearch.addEventListener("input", renderQueries);
 [elements.pageFilter, elements.pageFilterMode, elements.queryFilter, elements.queryFilterMode].forEach((element) => element.addEventListener("input", handleFilterChange));
+elements.customScopeRegex.addEventListener("input", () => {
+  saveConfig();
+  state.rows = [];
+  elements.downloadFullButton.disabled = true;
+  renderPageScopes();
+  if (state.selected) renderSelectedQuery(false);
+});
 [elements.pageQuickFilters, elements.queryQuickFilters].forEach((container) => container.addEventListener("click", (event) => {
   const button = event.target.closest("[data-filter-target]");
   if (!button) return;
