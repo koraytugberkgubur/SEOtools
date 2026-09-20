@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>SEO Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --ink:#102b3a; --navy:#0c3b5d; --blue:#2b6f9b; --sky:#d9edf4; --paper:#f4f7f5;
+  --white:#fff; --line:#bfd0d5; --orange:#f05a34; --muted:#5f727b;
+  --masthead:rgba(244,247,245,.9);
+  --display:"Instrument Sans",sans-serif; --mono:"DM Mono",monospace;
+  --shadow:0 18px 55px rgba(16,43,58,.12);
+}
+*{box-sizing:border-box}
+body{margin:0;color:var(--ink);background:var(--paper);font-family:var(--display);min-height:100vh}
+.grain{position:fixed;inset:0;pointer-events:none;opacity:.17;z-index:10;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E")}
+.masthead{height:74px;padding:0 clamp(20px,4vw,64px);display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--line);background:var(--masthead);backdrop-filter:blur(12px);position:sticky;top:0;z-index:9}
+.wordmark{display:flex;gap:12px;align-items:center;color:var(--ink);text-decoration:none;font-weight:650;letter-spacing:-.02em}
+.wordmark-mark{font:500 13px/1 var(--mono);color:var(--white);background:var(--navy);padding:9px 7px;transform:rotate(-3deg)}
+.chip{font:400 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+main{padding:clamp(36px,6vw,80px) clamp(20px,4vw,64px);max-width:1180px;margin:0 auto}
+h1{font-size:clamp(34px,5vw,56px);line-height:1.02;letter-spacing:-.03em;margin:0 0 14px}
+h1 em{font-style:italic;color:var(--blue)}
+.lede{color:var(--muted);max-width:56ch;margin:0 0 44px;font-size:17px;line-height:1.55}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(288px,1fr))}
+.card{display:flex;flex-direction:column;gap:9px;padding:24px;background:var(--white);border:1px solid var(--line);
+  text-decoration:none;color:inherit;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--blue)}
+.card:focus-visible{outline:3px solid rgba(240,90,52,.38);outline-offset:2px}
+.card-name{font-weight:650;font-size:17px;letter-spacing:-.01em;text-transform:capitalize}
+.card-desc{color:var(--muted);font-size:14px;line-height:1.5;flex:1}
+.card-go{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--orange)}
+footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;line-height:1.6}
+code{font-family:var(--mono);font-size:.92em;background:var(--sky);padding:1px 5px}
+@media (prefers-color-scheme:dark){
+  :root{--ink:#e8eff2;--paper:#0d1f2a;--white:#142c3a;--line:#2a4757;--muted:#93a8b4;--sky:#1b3a4b;
+        --masthead:rgba(13,31,42,.9)}
+  .wordmark-mark{background:var(--blue)}
+}
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<header class="masthead">
+  <a class="wordmark" href="./"><span class="wordmark-mark">SEO</span><span>Tools</span></a>
+  <span class="chip">7 tools</span>
+</header>
+<main>
+  <h1>Everything in <em>one place.</em></h1>
+  <p class="lede">Browser-based SEO tooling. Each tool runs entirely client-side and
+  authenticates to Google in your own browser &mdash; no server, no stored credentials.</p>
+  <div class="grid">
+      <a class="card" href="tools/domain-expiry-checker/index.html">
+        <span class="card-name">domain expiry checker</span>
+        <span class="card-desc">Checks expiry dates for a list of domains in bulk.</span>
+        <span class="card-go">open &rarr;</span>
+      </a>
+      <a class="card" href="tools/gsc-big-query-shortcuts/index.html">
+        <span class="card-name">gsc big query shortcuts</span>
+        <span class="card-desc">Base BigQuery query shortcuts for Search Console bulk exports.</span>
+        <span class="card-go">open &rarr;</span>
+      </a>
+      <a class="card" href="tools/gsc-bq-shortcuts-allergy/index.html">
+        <span class="card-name">gsc bq shortcuts allergy</span>
+        <span class="card-desc">GSC BigQuery shortcuts tuned for the allergy vertical.</span>
+        <span class="card-go">open &rarr;</span>
+      </a>
+      <a class="card" href="tools/gsc-bq-shortcuts-casino/index.html">
+        <span class="card-name">gsc bq shortcuts casino</span>
+        <span class="card-desc">GSC BigQuery shortcuts tuned for the casino vertical.</span>
+        <span class="card-go">open &rarr;</span>
+      </a>
+      <a class="card" href="tools/gsc-bq-shortcuts-law/index.html">
+        <span class="card-name">gsc bq shortcuts law</span>
+        <span class="card-desc">GSC BigQuery shortcuts tuned for the legal vertical.</span>
+        <span class="card-go">open &rarr;</span>
+      </a>
+      <a class="card" href="tools/gsc-bq-shortcuts-xometry/index.html">
+        <span class="card-name">gsc bq shortcuts xometry</span>
+        <span class="card-desc">GSC BigQuery shortcuts tuned for industrial and manufacturing.</span>
+        <span class="card-go">open &rarr;</span>
+      </a>
+      <a class="card" href="tools/image-quality-advisor/index.html">
+        <span class="card-name">image quality advisor</span>
+        <span class="card-desc">Flags image quality problems across a page set.</span>
+        <span class="card-go">open &rarr;</span>
+      </a>
+  </div>
+  <footer>
+    Each tool keeps its own full commit history inside this repository &mdash;
+    <code>git log -- tools/&lt;name&gt;</code>.<br />
+    Sign-in requires this origin to be registered as an authorized JavaScript origin
+    on your Google OAuth client.
+  </footer>
+</main>
+</body>
+</html>

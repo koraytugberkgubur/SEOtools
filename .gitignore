@@ -10,3 +10,4 @@ venv/
 *service-account*.json
 client_secret*.json
 outputs/
+.claude/
