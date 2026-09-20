@@ -1,0 +1,1 @@
+{"name":"image-quality-advisor","version":"1.0.0","private":true,"description":"Document AI image-defect scores translated into prioritized image SEO fixes.","scripts":{"start":"node server.js","test":"node --test"},"license":"MIT"}
