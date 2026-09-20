@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Check domain expiration dates from an XLSX or CSV file in your browser.">
+  <title>Domain Ledger — Expiry Checker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="Domain Ledger home">
+      <span class="brand-mark" aria-hidden="true">DL</span>
+      <span>Domain Ledger</span>
+    </a>
+    <a class="github-link" href="https://github.com/KTG1/domain-expiry-checker" target="_blank" rel="noreferrer">View source <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Registry intelligence / in your browser</p>
+        <h1>Know which domains need your attention.</h1>
+        <p class="lede">Drop in your portfolio spreadsheet. Domain Ledger reads it locally, checks public RDAP records, and returns a clean workbook with expiry dates and risk signals.</p>
+        <div class="privacy-note"><span class="privacy-dot" aria-hidden="true"></span>Your spreadsheet never leaves this browser.</div>
+      </div>
+      <aside class="status-card" aria-label="Example registry record">
+        <div class="status-card-head"><span>REGISTRY RECORD</span><span>LIVE</span></div>
+        <div class="domain-line">yourdomain.com</div>
+        <dl>
+          <div><dt>Status</dt><dd><span class="signal signal-good"></span>Active</dd></div>
+          <div><dt>Expires</dt><dd>2027—08—14</dd></div>
+          <div><dt>Days left</dt><dd>382</dd></div>
+        </dl>
+        <div class="scan-line" aria-hidden="true"></div>
+      </aside>
+    </section>
+
+    <section class="tool-shell" aria-labelledby="tool-title">
+      <div class="tool-heading">
+        <div>
+          <p class="eyebrow">Portfolio check</p>
+          <h2 id="tool-title">Upload your domain list</h2>
+        </div>
+        <p>Supports .xlsx, .xls and .csv</p>
+      </div>
+
+      <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-describedby="drop-help">
+        <input id="file-input" type="file" accept=".xlsx,.xls,.csv" hidden>
+        <span class="upload-icon" aria-hidden="true">↑</span>
+        <strong>Drop a spreadsheet here</strong>
+        <span>or <span class="text-link">choose a file</span></span>
+        <small id="drop-help">Row 1 should contain a Domain, Domain Name, URL, or Website header.</small>
+      </div>
+
+      <div id="setup-panel" class="setup-panel" hidden>
+        <div class="file-summary">
+          <div class="file-icon">XLS</div>
+          <div><strong id="file-name"></strong><span id="file-meta"></span></div>
+          <button id="remove-file" class="icon-button" type="button" aria-label="Remove file">×</button>
+        </div>
+        <div class="controls">
+          <label>Worksheet<select id="sheet-select"></select></label>
+          <label>Domain column<select id="column-select"></select></label>
+          <label>Warning window<select id="warning-days"><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select></label>
+        </div>
+        <button id="check-button" class="primary-button" type="button">Check domain expiry</button>
+      </div>
+
+      <div id="progress-panel" class="progress-panel" hidden aria-live="polite">
+        <div class="progress-copy"><strong id="progress-title">Checking registry records…</strong><span id="progress-count">0 / 0</span></div>
+        <div class="progress-track"><span id="progress-bar"></span></div>
+        <p id="current-domain">Preparing domains</p>
+        <button id="cancel-button" class="secondary-button" type="button">Cancel</button>
+      </div>
+
+      <div id="results-panel" class="results-panel" hidden aria-live="polite">
+        <div class="result-summary">
+          <div><span class="metric-label">Checked</span><strong id="metric-checked">0</strong></div>
+          <div><span class="metric-label">Active</span><strong id="metric-active">0</strong></div>
+          <div><span class="metric-label">Attention</span><strong id="metric-attention">0</strong></div>
+          <div><span class="metric-label">Unknown</span><strong id="metric-unknown">0</strong></div>
+        </div>
+        <div class="result-actions">
+          <button id="download-button" class="primary-button" type="button">Download checked workbook</button>
+          <button id="start-over" class="secondary-button" type="button">Check another file</button>
+        </div>
+      </div>
+
+      <div id="error-box" class="error-box" hidden role="alert"></div>
+    </section>
+
+    <section class="explainer" aria-labelledby="how-title">
+      <div><p class="eyebrow">What the result means</p><h2 id="how-title">Registry facts, not guesswork.</h2></div>
+      <div class="definition-grid">
+        <article><span class="definition-mark good"></span><h3>Active</h3><p>The registry expiry date is beyond your warning window.</p></article>
+        <article><span class="definition-mark warning"></span><h3>Attention</h3><p>The date is close, past, or the registry reports redemption.</p></article>
+        <article><span class="definition-mark neutral"></span><h3>Unknown</h3><p>No reliable date was returned. Confirm directly with the registrar.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer><span>Domain Ledger</span><p>Public RDAP data can lag registrar billing and auto-renewal records. Confirm valuable domains with your registrar.</p></footer>
+</body>
+</html>
