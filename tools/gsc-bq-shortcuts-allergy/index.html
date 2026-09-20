@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Run allergy-industry Google Search Console BigQuery analyses for allergy types, symptoms, tests, treatments, cities, and doctors." />
+    <meta name="theme-color" content="#075f62" />
+    <title>Allergy GSC BigQuery Shortcuts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css?v=allergy-v1" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <header class="masthead">
+      <a class="wordmark" href="#top" aria-label="Allergy GSC BigQuery Shortcuts home">
+        <span class="wordmark-mark">A·Q</span>
+        <span>Allergy GSC shortcuts</span>
+      </a>
+      <div class="connection-chip" id="connectionChip"><span></span> Not connected</div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">17 reusable analyses · allergy URL intelligence</p>
+          <h1>Trace allergy search<br /><em>visibility.</em></h1>
+          <p class="hero-intro">Connect your Search Console bulk export and isolate allergy types, symptoms, treatments, city pages, and doctor profiles without rebuilding SQL.</p>
+        </div>
+        <div class="signal-map" aria-label="A diagram showing Search Console data flowing through BigQuery into a results table">
+          <div class="signal-node source"><span>Pollen · food · pet</span>GSC export</div>
+          <svg viewBox="0 0 420 165" role="img" aria-hidden="true">
+            <path d="M88 33 C190 33, 164 132, 278 132" />
+            <path d="M88 83 C171 83, 195 83, 278 83" />
+            <path d="M88 132 C190 132, 164 33, 278 33" />
+            <circle cx="91" cy="33" r="4" /><circle cx="91" cy="83" r="4" /><circle cx="91" cy="132" r="4" />
+            <circle cx="278" cy="33" r="4" /><circle cx="278" cy="83" r="4" /><circle cx="278" cy="132" r="4" />
+          </svg>
+          <div class="signal-node destination"><span>17 analyses</span>Search signals</div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside class="setup-panel" aria-labelledby="setupTitle">
+          <div class="panel-heading">
+            <p class="eyebrow">Connection</p>
+            <h2 id="setupTitle">Your BigQuery source</h2>
+          </div>
+
+          <form id="configForm" autocomplete="off">
+            <label>Google OAuth client ID
+              <input id="clientId" name="clientId" type="text" placeholder="000000000000-….apps.googleusercontent.com" spellcheck="false" />
+              <small>Public identifier only—never paste a client secret.</small>
+            </label>
+            <div class="field-pair">
+              <label>Project ID
+                <input id="projectId" name="projectId" type="text" placeholder="my-gcp-project" spellcheck="false" required />
+              </label>
+              <label>Location
+                <input id="location" name="location" type="text" value="US" placeholder="US" spellcheck="false" />
+              </label>
+            </div>
+            <label>Dataset
+              <input id="dataset" name="dataset" type="text" value="searchconsole" placeholder="searchconsole" spellcheck="false" required />
+            </label>
+            <label>Performance table
+              <input id="tableName" name="tableName" type="text" value="searchdata_url_impression" spellcheck="false" required />
+            </label>
+            <label>URL Inspection table <span class="optional">optional</span>
+              <input id="inspectionTable" name="inspectionTable" type="text" value="url_inspection" spellcheck="false" />
+            </label>
+            <div class="form-actions">
+              <button class="primary-button" id="connectButton" type="button">Connect Google</button>
+              <button class="text-button" id="disconnectButton" type="button" hidden>Disconnect</button>
+            </div>
+          </form>
+
+          <details class="setup-help">
+            <summary>One-time Google Cloud setup</summary>
+            <ol>
+              <li>Enable the BigQuery API in your Google Cloud project.</li>
+              <li>Create an OAuth 2.0 Client ID for a Web application.</li>
+              <li>Add <code>https://ktg1.github.io</code> as an authorized JavaScript origin.</li>
+              <li>Give the signed-in user BigQuery Job User plus read access to the dataset.</li>
+            </ol>
+          </details>
+          <p class="privacy-note">Queries go directly from this browser to Google. Credentials and results are never sent to this GitHub Pages site.</p>
+        </aside>
+
+        <section class="query-panel" aria-labelledby="queryTitle">
+          <div class="query-toolbar">
+            <div>
+              <p class="eyebrow">Query library</p>
+              <h2 id="queryTitle">Choose the question</h2>
+            </div>
+            <label class="search-box">
+              <span class="sr-only">Search queries</span>
+              <input id="querySearch" type="search" placeholder="Filter 17 shortcuts…" />
+            </label>
+          </div>
+          <div class="page-scope" aria-labelledby="pageScopeLabel">
+            <div class="page-scope-copy">
+              <span class="eyebrow" id="pageScopeLabel">Page group</span>
+              <strong id="pageScopeSummary">Every allergy-health URL in the export</strong>
+            </div>
+            <div class="page-scope-tabs" id="pageScopeTabs" role="tablist" aria-label="Limit every query to a page group"></div>
+          </div>
+          <div class="custom-scope-editor" id="customScopeEditor" hidden>
+            <label for="customScopeRegex">Custom page-group regex</label>
+            <input id="customScopeRegex" type="text" placeholder="e.g. /(?:allergy-types|locations|doctors)/" spellcheck="false" />
+            <small>Matched case-insensitively against the full URL and stacked with the filters below.</small>
+          </div>
+          <details class="data-filters" id="dataFilters">
+            <summary>
+              <span><b>Refine data</b><small id="filterSummary">Optional URL and search-query filters</small></span>
+              <i id="activeFilterCount">0 active</i>
+            </summary>
+            <div class="filter-grid">
+              <div class="filter-rule">
+                <label for="pageFilter">Page URL</label>
+                <div class="filter-controls">
+                  <select id="pageFilterMode" aria-label="Page URL matching rule">
+                    <option value="contains">contains</option>
+                    <option value="excludes">does not contain</option>
+                    <option value="starts">starts with</option>
+                    <option value="ends">ends with</option>
+                    <option value="exact">exactly matches</option>
+                    <option value="regex">matches regex</option>
+                  </select>
+                  <input id="pageFilter" type="text" placeholder="e.g. /pages/katzenallergie" spellcheck="false" />
+                </div>
+                <small>Applied after the selected page-group preset.</small>
+                <div class="quick-filters" id="pageQuickFilters" aria-label="Quick page URL filters"></div>
+              </div>
+              <div class="filter-rule">
+                <label for="queryFilter">Search query</label>
+                <div class="filter-controls">
+                  <select id="queryFilterMode" aria-label="Search query matching rule">
+                    <option value="contains">contains</option>
+                    <option value="excludes">does not contain</option>
+                    <option value="starts">starts with</option>
+                    <option value="ends">ends with</option>
+                    <option value="exact">exactly matches</option>
+                    <option value="regex">matches regex</option>
+                  </select>
+                  <input id="queryFilter" type="text" placeholder="e.g. allergist near me" spellcheck="false" />
+                </div>
+                <small>Only applies to the performance table; matching is case-insensitive.</small>
+                <div class="quick-filters" id="queryQuickFilters" aria-label="Quick search-query filters"></div>
+              </div>
+            </div>
+          </details>
+          <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Query categories"></div>
+          <div class="query-grid" id="queryGrid"></div>
+        </section>
+      </section>
+
+      <section class="result-drawer" id="resultDrawer" aria-live="polite">
+        <div class="result-header">
+          <div>
+            <p class="eyebrow" id="resultStatus">Ready</p>
+            <h2 id="resultTitle">Results appear here</h2>
+          </div>
+          <div class="result-actions">
+            <button class="secondary-button" id="copySqlButton" type="button" disabled>Copy SQL</button>
+            <button class="secondary-button" id="dryRunButton" type="button" disabled>Estimate cost</button>
+            <button class="secondary-button download-full" id="downloadFullButton" type="button" disabled>Download full data</button>
+            <button class="primary-button run" id="runQueryButton" type="button" disabled>Run query</button>
+          </div>
+        </div>
+        <div class="query-detail" id="queryDetail">
+          <p>Select a shortcut to inspect its SQL and run it.</p>
+        </div>
+        <div class="result-meta" id="resultMeta" hidden></div>
+        <div class="table-shell" id="tableShell" hidden>
+          <table id="resultsTable"></table>
+        </div>
+        <div class="empty-state" id="emptyState">
+          <div class="empty-glyph">SELECT<br />→</div>
+          <p>Your data stays in your Google session.<br />This page is only the control surface.</p>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status"></div>
+    <script src="industry-config.js?v=allergy-v1"></script>
+    <script src="queries.js?v=allergy-v1"></script>
+    <script src="app.js?v=allergy-v1"></script>
+  </body>
+</html>

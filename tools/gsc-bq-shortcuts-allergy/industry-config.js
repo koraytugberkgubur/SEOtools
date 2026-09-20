@@ -1,0 +1,72 @@
+window.INDUSTRY_CONFIG = {
+  pageScopes: [
+    {
+      id: "all",
+      label: "All pages",
+      summary: "Every allergy-health URL in the export",
+      pattern: null,
+    },
+    {
+      id: "allergy-types",
+      label: "Allergy types",
+      summary: "Allergen and allergy-type pages: pollen, food, pets, mites, insects, mould, and latex",
+      pattern: "/(?:allergy-types?|allergies?|allergien)(?:[/?#]|$)|/pages/[^/?#]*(?:pollen|graser|graeser|milben|staub|tierhaar|katzen|hunde|nuss|erdnuss|haselnuss|mandel|milch|ei|lebensmittel|latex|insekten|bienen|wespen|mucken|muecken|schimmel)[^/?#]*(?:[/?#]|$)",
+    },
+    {
+      id: "symptoms",
+      label: "Symptoms",
+      summary: "Symptom and condition pages, including asthma, rash, cough, rhinitis, and anaphylaxis",
+      pattern: "/(?:symptoms?|conditions?|symptome|beschwerden)(?:[/?#]|$)|/pages/[^/?#]*(?:symptom|asthma|atemnot|hautausschlag|husten|rhinitis|anaphyl|juck|niesen|schmerzen|schwindel)[^/?#]*(?:[/?#]|$)",
+    },
+    {
+      id: "tests-treatment",
+      label: "Tests & treatment",
+      summary: "Diagnosis, allergy testing, medication, immunotherapy, and treatment pages",
+      pattern: "/(?:tests?|diagnosis|treatments?|therap(?:y|ies)|behandlung|therapie)(?:[/?#]|$)|/pages/[^/?#]*(?:allergietest|diagnose|behandlung|hyposensibilisierung|immuntherapie|antihistaminika|kortison)[^/?#]*(?:[/?#]|$)",
+    },
+    {
+      id: "cities",
+      label: "City pages",
+      summary: "City, location, and local allergist landing pages",
+      pattern: "/(?:cities?|city|locations?|standorte?|stadt|orte)(?:[/?#]|$)|/pages/[^/?#]*(?:allergolog|facharzt|fachaerzt)[^/?#]*(?:-in-|-um-)[^/?#]+(?:[/?#]|$)",
+    },
+    {
+      id: "doctors",
+      label: "Doctor pages",
+      summary: "Doctor directories, allergist profiles, specialists, and medical expert pages",
+      pattern: "/(?:doctors?|allergists?|physicians?|specialists?|aerzte|arzte|allergologen|fachaerzte)(?:[/?#]|$)|/pages/(?:allergologensuche|medizinisches-expertenteam|[^/?#]*(?:allergolog|facharzt|fachaerzt)[^/?#]*)(?:[/?#]|$)",
+    },
+    {
+      id: "custom",
+      label: "Custom regex",
+      summary: "Use your own regular expression against the full page URL",
+      pattern: null,
+      custom: true,
+    },
+  ],
+  filterPresets: {
+    page: [
+      { id: "allergy-slugs", label: "Allergy slugs", mode: "regex", value: "(?:allerg(?:y|ies)|allergie|allergien)" },
+      { id: "pollen", label: "Pollen", mode: "regex", value: "(?:pollen|heuschnupfen|hay[- ]?fever)" },
+      { id: "food", label: "Food", mode: "regex", value: "(?:food|lebensmittel|nuss|nut|milch|milk|ei(?:allergie)?|egg)" },
+      { id: "pets", label: "Pets", mode: "regex", value: "(?:pet|tierhaar|katzen|cat|hunde|dog)" },
+      { id: "children", label: "Children", mode: "regex", value: "(?:kinder|kindern|child|children|pediatric|paediatric)" },
+      { id: "doctor-urls", label: "Doctor URLs", mode: "regex", value: "(?:allergolog|allergist|doctor|physician|facharzt|fachaerzt|aerzte|arzte)" },
+      { id: "city-urls", label: "City URLs", mode: "regex", value: "/(?:cities?|locations?|standorte?|stadt|orte)/|(?:-in-|-um-)[a-z0-9-]+(?:[/?#]|$)" },
+      { id: "shopify-pages", label: "/pages/", mode: "contains", value: "/pages/" },
+      { id: "parameters", label: "Has parameters", mode: "regex", value: "[?&][^=]+=" },
+      { id: "deep", label: "Deep paths", mode: "regex", value: "^https?://[^/]+/(?:[^/?#]+/){2,}[^/?#]*/?$" },
+    ],
+    query: [
+      { id: "questions", label: "Questions", mode: "regex", value: "^(?:who|what|when|where|why|how|can|could|should|is|are|do|does|wer|was|wann|wo|warum|wie|kann|ist|sind)\\b" },
+      { id: "symptoms", label: "Symptoms", mode: "regex", value: "\\b(?:symptom|symptome|rash|hautausschlag|itch|juck|cough|husten|sneeze|niesen|asthma|rhinitis)\\b" },
+      { id: "tests", label: "Tests", mode: "regex", value: "\\b(?:allergy test|allergietest|pricktest|blood test|bluttest|diagnosis|diagnose)\\b" },
+      { id: "treatment", label: "Treatment", mode: "regex", value: "\\b(?:treatment|behandlung|therapy|therapie|hyposensibilisierung|immunotherapy|immuntherapie|antihistamin)\\b" },
+      { id: "local", label: "Local intent", mode: "regex", value: "\\b(?:near me|nearby|in my area|in der nahe|in der nähe|allergologe in|allergist in)\\b" },
+      { id: "doctor", label: "Doctor intent", mode: "regex", value: "\\b(?:allergist|allergologe|allergologin|doctor|physician|facharzt|facharztin|fachärztin)\\b" },
+      { id: "children", label: "Children", mode: "regex", value: "\\b(?:child|children|kid|kids|baby|pediatric|paediatric|kind|kinder|kindern|baby)\\b" },
+      { id: "emergency", label: "Emergency", mode: "regex", value: "\\b(?:anaphylaxis|anaphylaxie|anaphylaktischer schock|emergency|notfall)\\b" },
+      { id: "long-tail", label: "Long-tail 5+", mode: "regex", value: "^\\S+(?:\\s+\\S+){4,}$" },
+    ],
+  },
+};
