@@ -7,7 +7,15 @@ from collections import defaultdict
 from datetime import date, timedelta
 from pathlib import Path
 
-VERSION = '1.0.0'
+VERSION = '2.0.0'
+
+# Site-level head terms. They name no page, so they express no framing
+# preference for any single page, and they dominate impressions
+# (49.8% on unscramblex.com at 0.39% CTR). Excluded from the coverage
+# denominator rather than counted against it.
+GENERIC = {'unscramble', 'unscrambler', 'unscramble words', 'unscramble letters',
+           'unscramble word', 'word unscramble', 'word unscrambler',
+           'words unscramble', 'unscramble this', 'anagram', 'words', 'letters'}
 
 
 def classify(query, word):
@@ -15,6 +23,8 @@ def classify(query, word):
     w = word.lower()
     if not q:
         return 'anonymous'
+    if q in GENERIC:
+        return 'generic'
     # Exact surface form only: do not merge distinct anagram landing pages.
     if w not in q.split():
         return 'other'
@@ -25,7 +35,14 @@ def classify(query, word):
         return 'special'
     u = bool(re.search(r'\bunscrambl(?:e|er|ing|ed)\b', q))
     f = bool(re.search(r'\bwords? (?:from|with|using|out of)\b|\bmake words?\b', q))
-    return 'both' if u and f else 'unscramble' if u else 'words' if f else 'other'
+    if u and f:
+        return 'both'
+    if u:
+        return 'unscramble'
+    if f:
+        return 'words'
+    # The raw letter string on its own: wants the page, states no preference.
+    return 'bare' if q == w else 'other'
 
 
 def summarize(rows, word):
@@ -41,19 +58,21 @@ def summarize(rows, word):
         position += float(r['sum_position'])
     all_i = sum(totals.values())
     named = all_i - totals['anonymous']
+    # Queries that could have expressed a framing preference.
+    framed = named - totals['generic'] - totals['bare']
     direct = totals['unscramble'] + totals['words'] + totals['both']
-    return dict(total=all_i, named=named, days=len(days), clicks=clicks,
+    return dict(total=all_i, named=named, framed=framed, days=len(days), clicks=clicks,
                 ctr=clicks / all_i if all_i else 0,
                 position=position / all_i + 1 if all_i else None,
                 coverage=named / all_i if all_i else 0,
-                classified=direct / named if named else 0,
+                classified=direct / framed if framed else 0,
                 u=(totals['unscramble'] + .5 * totals['both']) / direct if direct else 0,
                 w=(totals['words'] + .5 * totals['both']) / direct if direct else 0,
                 counts=dict(totals))
 
 
 def candidate(s):
-    if s['named'] < 500 or s['days'] < 14:
+    if s['framed'] < 250 or s['days'] < 14:
         return None, 'insufficient_evidence'
     if s['coverage'] < .70 or s['classified'] < .70:
         return None, 'insufficient_query_coverage'
@@ -108,10 +127,12 @@ def decide(page, rows, end):
         if not n.isdigit() or int(n) <= 0 or page['count_verified'].lower() != 'true':
             return hold('verified_word_count_required')
     display = word.upper()
-    templates = {'T1': f'Unscramble {display}: {n} Words from {display}',
+    # 'Words with X' outperforms 'Words from X' by ~2.5x on CTR at matched
+    # position. See TITLE-QUERY-EVIDENCE.md.
+    templates = {'T1': f'Unscramble {display}: {n} Words with {display}',
                  'T2': f'Unscramble {display}',
-                 'T3': f'{n} Words from {display}: Unscramble {display}',
-                 'T4': f'{n} Words from {display}'}
+                 'T3': f'{n} Words with {display}: Unscramble {display}',
+                 'T4': f'{n} Words with {display}'}
     title = templates[tb]
     if tb != 'T2' and int(n) == 1:
         title = title.replace('1 Words', '1 Word')

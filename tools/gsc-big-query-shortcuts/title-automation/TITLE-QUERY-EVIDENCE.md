@@ -92,3 +92,85 @@ per seed and floor at 20 monthly searches, so the words-from tail is undersample
 here in a way real Search Console data will not be. What it does establish is the
 direction: unscramble framing dominates, T2 should be the common outcome, and a
 page landing in T3/T4 is unusual enough to be worth a look before testing.
+
+---
+
+# Part 2 — real Search Console data (unscramblex.com, 90 days)
+
+Source: two GSC Performance exports pulled 2026-09-21, one unfiltered and one
+filtered to `query contains "words"`. After de-duplicating: **1,810 queries,
+8,106,608 impressions, 160,405 clicks**.
+
+Keyword-tool volume said unscramble framing dominates. Click data says something
+different, and it changed three things in the rules.
+
+## Where the impressions are, and where the clicks are
+
+| Query kind | Queries | Impressions | % impr | % clicks | CTR | Avg pos |
+|---|---:|---:|---:|---:|---:|---:|
+| generic head (`unscramble words`, …) | 10 | 4,047,383 | 49.9% | 9.8% | 0.39% | 7.37 |
+| bare letter string (`epirner`) | 281 | 3,120,849 | 38.5% | 16.7% | 0.86% | 6.43 |
+| `unscramble <slot>` | 479 | 373,364 | 4.6% | 24.3% | 10.44% | 2.71 |
+| `words from/with <slot>` | 954 | 329,681 | 4.1% | 12.1% | 5.87% | 3.78 |
+| brand | 6 | 62,582 | 0.8% | 33.7% | 86.49% | 1.15 |
+
+**88.4% of impressions come from queries that argue for no particular wording**
+— site-level head terms and bare letter strings — and they produce 26.5% of clicks.
+The queries that actually carry a framing preference are 8.7% of impressions.
+
+A note on the bare-slot tail: a large share of it is misspelled adult-site
+domains (`nhentai` → `nhemtai`, `nhentia`, `nhenrai`; `eporner` → `epirner`,
+`epormer`, `eporm`). Anagram pages match any letter string, so the site ranks
+for them at ~0.04–0.8% CTR. That is not a title problem and no title will fix it.
+
+## Correction 1 — the coverage gate was unreachable
+
+`classified = direct / named` needed ≥ 0.70. On this site:
+
+```
+direct / named                              = 0.0893
+direct / (named − generic − bare)           = 0.8175
+```
+
+At 8.9% every page fails the gate and returns `insufficient_query_coverage`,
+so the system would have produced no suggestions at all. Generic head terms and
+bare letter strings are now their own buckets, excluded from the denominator —
+they are evidence that the page is wanted, not evidence of which phrasing wins.
+The evidence floor moves with it, from `named ≥ 500` to `framed ≥ 250`.
+
+## Correction 2 — "Words with", not "Words from"
+
+Slot-bearing queries only, controlled for position:
+
+| Position band | `words from <slot>` CTR | `words with <slot>` CTR | Ratio |
+|---|---:|---:|---:|
+| 1–2 | 60.6% | 61.2% | 1.01× |
+| 2–3 | 28.8% | 48.1% | **1.67×** |
+| 3–4 | 6.9% | 17.3% | **2.52×** |
+| 4–5 | 4.7% | 9.2% | **1.96×** |
+| 5–8 | 8.6% | 14.0% | **1.63×** |
+| 8+ | 21.4% | 17.0% | 0.80× (n=3) |
+| **overall** | **7.89%** (pos 3.61) | **19.72%** (pos 3.65) | **2.50×** |
+
+Same mean position, 2.5× the click-through. The templates now read
+`N Words with WORD`. Note this reverses if you include generic `words with
+letters` (1.2% CTR, 30k impressions), which is why the comparison is restricted
+to slot-bearing queries — those are the ones a per-page title answers.
+
+## Templates, v2
+
+| | Template |
+|---|---|
+| T1 | `Unscramble WORD: N Words with WORD` |
+| T2 | `Unscramble WORD` |
+| T3 | `N Words with WORD: Unscramble WORD` |
+| T4 | `N Words with WORD` |
+
+## Still open
+
+`unscramble <slot>` wins at position 1–2 (77.4% vs 59.3%) and `words with` wins
+everywhere below. That argues for raising the T2 cutoff above 0.85 so fewer pages
+get the bare unscramble title and more get the dual T1, which answers both
+framings. That is a judgement call, not a measured result — the CTR figures
+describe *query* framing, not *title* framing, and only a title test can close
+that gap. The thresholds are unchanged pending one.

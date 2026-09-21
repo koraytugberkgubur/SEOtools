@@ -43,6 +43,11 @@ CREATE OR REPLACE FUNCTION `PROJECT.DATASET.title_classify_query`(
         -- head term alone), so testing it later would misfile it.
         OR REGEXP_CONTAINS(q, r'\b(?:scrabble|wordle|crossword|jumble|words with friends|wwf)\b')
         AS is_special,
+      -- site-level head terms: they name no page, so they carry no
+      -- framing preference for any one page. 49.8% of unscramblex.com
+      -- impressions, 0.39% CTR.
+      REGEXP_CONTAINS(q, r'^(?:unscramble|unscrambler|unscramble words|unscramble letters|unscramble word|word unscramble|word unscrambler|words unscramble|unscramble this|anagram|words|letters)$')
+        AS is_generic,
       REGEXP_CONTAINS(q, r'\bunscrambl(?:e|er|ing|ed)\b') AS uns,
       -- 'words of X' is deliberately absent: in the corpus it is
       -- affirmation / encouragement / wisdom / mouth / god, not letters.
@@ -54,11 +59,15 @@ CREATE OR REPLACE FUNCTION `PROJECT.DATASET.title_classify_query`(
   SELECT
     CASE
       WHEN q = ''          THEN 'anonymous'
+      WHEN is_generic      THEN 'generic'
       WHEN NOT has_word    THEN 'other'
       WHEN is_special      THEN 'special'
       WHEN uns AND wfr     THEN 'both'
       WHEN uns             THEN 'unscramble'
       WHEN wfr             THEN 'words'
+      -- the raw letter string on its own, no framing word at all.
+      -- 38.5% of unscramblex.com impressions; states no preference.
+      WHEN q = w           THEN 'bare'
       ELSE 'other'
     END
   FROM flags
@@ -80,10 +89,13 @@ CREATE OR REPLACE FUNCTION `PROJECT.DATASET.title_build`(
       CONCAT(CAST(n AS STRING), IF(n = 1, ' Word', ' Words')) AS c
   )
   SELECT CASE template
-    WHEN 'T1' THEN CONCAT('Unscramble ', d, ': ', c, ' from ', d)
+    -- 'Words with X' outperforms 'Words from X' by ~2.5x on CTR at
+    -- matched position across every band from 2 down. See
+    -- TITLE-QUERY-EVIDENCE.md.
+    WHEN 'T1' THEN CONCAT('Unscramble ', d, ': ', c, ' with ', d)
     WHEN 'T2' THEN CONCAT('Unscramble ', d)
-    WHEN 'T3' THEN CONCAT(c, ' from ', d, ': Unscramble ', d)
-    WHEN 'T4' THEN CONCAT(c, ' from ', d)
+    WHEN 'T3' THEN CONCAT(c, ' with ', d, ': Unscramble ', d)
+    WHEN 'T4' THEN CONCAT(c, ' with ', d)
   END
   FROM parts
 ));
@@ -150,6 +162,11 @@ shares AS (
     SAFE_DIVIDE(SUM(sum_position), SUM(impressions)) + 1 AS avg_position,
     COUNT(DISTINCT IF(impressions > 0, data_date, NULL)) AS days,
     SUM(IF(bucket = 'anonymous', 0, impressions)) AS named,
+    -- queries that could have expressed a framing preference: everything
+    -- named, minus site-level head terms and bare letter strings.
+    SUM(IF(bucket IN ('anonymous', 'generic', 'bare'), 0, impressions)) AS framed,
+    SUM(IF(bucket = 'generic', impressions, 0)) AS generic_imp,
+    SUM(IF(bucket = 'bare', impressions, 0)) AS bare_imp,
     SUM(IF(bucket IN ('unscramble', 'words', 'both'), impressions, 0)) AS direct,
     SUM(IF(bucket = 'unscramble', impressions, 0))
       + 0.5 * SUM(IF(bucket = 'both', impressions, 0)) AS u_imp,
@@ -162,8 +179,8 @@ shares AS (
 scored AS (
   SELECT
     *,
-    SAFE_DIVIDE(named, total)  AS coverage,
-    SAFE_DIVIDE(direct, named) AS classified,
+    SAFE_DIVIDE(named, total)   AS coverage,
+    SAFE_DIVIDE(direct, framed) AS classified,
     SAFE_DIVIDE(u_imp, direct) AS u,
     SAFE_DIVIDE(w_imp, direct) AS w
   FROM shares
@@ -174,7 +191,7 @@ candidates AS (
   SELECT
     *,
     CASE
-      WHEN named < 500 OR days < 14              THEN NULL
+      WHEN framed < 250 OR days < 14             THEN NULL
       WHEN coverage < 0.70 OR classified < 0.70  THEN NULL
       WHEN u >= 0.85 THEN 'T2'
       WHEN u >= 0.60 THEN 'T1'
@@ -183,7 +200,7 @@ candidates AS (
       ELSE NULL
     END AS template,
     CASE
-      WHEN named < 500 OR days < 14              THEN 'insufficient_evidence'
+      WHEN framed < 250 OR days < 14             THEN 'insufficient_evidence'
       WHEN coverage < 0.70 OR classified < 0.70  THEN 'insufficient_query_coverage'
       WHEN u >= 0.85 THEN 'strong_unscramble'
       WHEN u >= 0.60 THEN 'mixed_unscramble_leading'
@@ -220,6 +237,7 @@ decided AS (
     prev.reason   AS prev_reason,
     conflict.note AS conflict_note,
     cur.total AS cur_impressions, cur.named AS cur_named, cur.days AS cur_days,
+    cur.framed AS cur_framed, cur.generic_imp, cur.bare_imp,
     cur.coverage, cur.classified, cur.u AS unscramble_share, cur.w AS words_from_share,
     cur.clicks AS cur_clicks, cur.avg_position,
     p.word_count, p.count_verified, p.eligible, p.last_changed,
@@ -265,9 +283,11 @@ SELECT
     ELSE 'PROPOSE_TEST'
   END AS status,
   COALESCE(blocked_by, candidate_reason) AS reason,
-  '1.0.0-sql' AS rule_version,
+  '2.0.0-sql' AS rule_version,
   end_date,
-  cur_impressions, cur_named, cur_days, cur_clicks,
+  cur_impressions, cur_named, cur_framed, cur_days, cur_clicks,
+  generic_imp AS generic_head_impressions,
+  bare_imp    AS bare_letter_impressions,
   ROUND(coverage, 4)         AS coverage,
   ROUND(classified, 4)       AS classified,
   ROUND(unscramble_share, 4) AS unscramble_share,

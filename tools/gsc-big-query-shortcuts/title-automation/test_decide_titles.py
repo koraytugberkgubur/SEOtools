@@ -61,11 +61,20 @@ class Decisions(unittest.TestCase):
         self.assertTrue(decide(page(), rows, END)['reason'].startswith('segment_conflict'))
 
     def test_exact_word_and_specialized_intent(self):
-        for q in ['unscramble live', 'love', 'anagram love']:
+        for q in ['unscramble live', 'anagram love']:
             self.assertEqual(classify(q,'love'), 'other')
         for q in ['3 letter words from love', 'love meaning', 'love scrabble']:
             self.assertEqual(classify(q,'love'), 'special')
         self.assertEqual(classify('Unscramble LOVE: words from love', 'love'), 'both')
+
+    def test_bare_letter_string(self):
+        # The raw string on its own wants the page but states no framing
+        # preference, so it must not count against coverage.
+        self.assertEqual(classify('love', 'love'), 'bare')
+
+    def test_generic_head_terms(self):
+        for q in ('unscramble', 'unscramble words', 'word unscrambler', 'anagram'):
+            self.assertEqual(classify(q, 'love'), 'generic', q)
 
     def test_unchanged(self):
         p = page(); p['current_title'] = 'Unscramble LOVE'

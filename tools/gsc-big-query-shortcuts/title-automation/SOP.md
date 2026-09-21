@@ -34,16 +34,16 @@ Calculate each group’s share of the impressions assigned to those two groups.
 | What the data shows | Title to recommend |
 |---|---|
 | Unscramble is 85% or more | **T2:** `Unscramble [WORD]` |
-| Unscramble is 60% to less than 85% | **T1:** `Unscramble [WORD]: [N] Words from [WORD]` |
-| Words from is 60% to less than 85% | **T3:** `[N] Words from [WORD]: Unscramble [WORD]` |
-| Words from is 85% or more | **T4:** `[N] Words from [WORD]` |
+| Unscramble is 60% to less than 85% | **T1:** `Unscramble [WORD]: [N] Words with [WORD]` |
+| Words from is 60% to less than 85% | **T3:** `[N] Words with [WORD]: Unscramble [WORD]` |
+| Words from is 85% or more | **T4:** `[N] Words with [WORD]` |
 | Neither reaches 60% | Keep the current title |
 
 **Example:** A page receives 700 impressions from unscramble searches and 300 from words-from searches. Unscramble represents 70%, so recommend T1.
 
 If the page actually returns 12 words, that title becomes:
 
-> Unscramble LOVE: 12 Words from LOVE
+> Unscramble LOVE: 12 Words with LOVE
 
 The count above is an example, not a verified count for LOVE.
 
@@ -54,8 +54,13 @@ Split the 56 days into two 28-day periods. Apply the table to each period separa
 Recommend a change only when:
 
 - Both periods choose the same title version.
-- Each period has at least 500 impressions with known query text, spread across at least 14 days with impressions.
-- Known query text covers at least 70% of all impressions, and the two groups cover at least 70% of known-query impressions.
+- Each period has at least 250 impressions from queries that argue for a wording, spread across at least 14 days with impressions.
+- Known query text covers at least 70% of all impressions, and the two groups cover at least 70% of the impressions that argue for a wording.
+
+Two kinds of search are left out of that last calculation, because neither asks
+for one wording over another: site-level head terms such as `unscramble words`,
+and the bare letter string on its own. On unscramblex.com they are 88% of all
+impressions, so counting them would hold every page.
 - The title has not changed within the last 56 days.
 - The page works, is indexable, and is the intended main URL for that word.
 - Any number used in the title matches the page’s current results.
