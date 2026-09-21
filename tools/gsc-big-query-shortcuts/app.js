@@ -4,6 +4,7 @@ const state = {
   tokenClient: null,
   selected: null,
   category: "All",
+  guideTab: 0,
   pageScope: "all",
   wordGroup: "all",
   wordGroups: null,
@@ -28,6 +29,7 @@ const elements = {
   dataset: $("#dataset"), tableName: $("#tableName"), inspectionTable: $("#inspectionTable"),
   connectButton: $("#connectButton"), disconnectButton: $("#disconnectButton"), connectionChip: $("#connectionChip"),
   querySearch: $("#querySearch"), categoryTabs: $("#categoryTabs"), queryGrid: $("#queryGrid"),
+  categoryGuide: $("#categoryGuide"), guideTabs: $("#guideTabs"), guidePanel: $("#guidePanel"),
   pageScopeTabs: $("#pageScopeTabs"), pageScopeSummary: $("#pageScopeSummary"),
   wordScope: $("#wordScope"), wordScopeTabs: $("#wordScopeTabs"),
   resultStatus: $("#resultStatus"), resultTitle: $("#resultTitle"), queryDetail: $("#queryDetail"),
@@ -237,6 +239,71 @@ async function prepareWordGroups() {
   showToast(`Classified ${slugs.length.toLocaleString()} anagram URLs: ${state.wordGroups.dictionary.length.toLocaleString()} dictionary words, ${state.wordGroups.nonDictionary.length.toLocaleString()} non-dictionary words.`);
 }
 
+const CATEGORY_GUIDES = {
+  Titles: [
+    {
+      label: "How it works",
+      html: `
+        <ol class="guide-steps">
+          <li><b>Reads the last 28 days</b> of <code>searchdata_url_impression</code>, keeping only URLs that look like <code>/anagram/&lt;word&gt;</code>. The page's word is taken from the URL, so there is nothing to upload.</li>
+          <li><b>Buckets every query</b> against that word: <code>unscramble</code>, <code>words</code>, <code>both</code>, <code>bare</code>, <code>generic</code>, <code>special</code>, <code>other</code>.</li>
+          <li><b>Measures the split</b> on the queries that argue for a wording. <code>bare</code> (the letter string alone) and <code>generic</code> (site-level heads like <i>unscramble words</i>) are left out — they show the page is wanted, not which wording wins. On unscramblex.com they are 88% of impressions, so counting them would hold every page.</li>
+          <li><b>Picks a template</b> from the unscramble share: 85%+ &rarr; T2, 60–85% &rarr; T1, and the mirror of that for words-from &rarr; T4 and T3. Below 60% either way, no suggestion.</li>
+          <li><b>Writes the title</b> and repeats the page's answer on every one of its query rows, so you can see which searches the wording is answering.</li>
+        </ol>
+        <p class="guide-note">This is the quick look. It skips the two-window stability check, the device and country conflict check, and the title cooldown — those live in <code>title-automation/suggest-titles.sql</code>.</p>`,
+    },
+    {
+      label: "What you get",
+      html: `
+        <p>One row per query and page. Sorted by impressions, highest first.</p>
+        <table class="guide-table">
+          <thead><tr><th>Column</th><th>What it holds</th></tr></thead>
+          <tbody>
+            <tr><td>query</td><td>The search, lowercased. Anonymised queries are dropped.</td></tr>
+            <tr><td>url</td><td>The page it landed on.</td></tr>
+            <tr><td>suggested_title</td><td>The title this page's query mix argues for. <code>{N}</code> is left in for you to fill with the real result count.</td></tr>
+            <tr><td>template</td><td>T1–T4, or empty when nothing cleared the bar.</td></tr>
+            <tr><td>query_intent</td><td>This row's bucket — how this one search was read.</td></tr>
+            <tr><td>impressions / clicks / ctr</td><td>That query on that page over the window.</td></tr>
+            <tr><td>page_unscramble_share</td><td>0–1. The split the template came from.</td></tr>
+            <tr><td>page_framed_impressions</td><td>Impressions that argued for a wording. Needs 250+.</td></tr>
+            <tr><td>reason</td><td>Why there is no suggestion, when there isn't one.</td></tr>
+          </tbody>
+        </table>
+        <p class="guide-note"><b>Download full data</b> gives the same columns as CSV. The title repeats down every row of a page — one page, one title, however many queries reach it.</p>`,
+    },
+    {
+      label: "Sample export",
+      html: `
+        <div class="guide-scroll">
+          <table class="guide-table">
+            <thead><tr><th>query</th><th>url</th><th class="wrap">suggested_title</th><th>template</th><th>query_intent</th><th>impressions</th><th>ctr</th></tr></thead>
+            <tbody>
+              <tr><td>unscramble gamei</td><td>/anagram/gamei</td><td class="wrap">Unscramble GAMEI</td><td>T2</td><td>unscramble</td><td>4,210</td><td>11.2%</td></tr>
+              <tr><td>gamei</td><td>/anagram/gamei</td><td class="wrap">Unscramble GAMEI</td><td>T2</td><td>bare</td><td>1,905</td><td>0.9%</td></tr>
+              <tr><td>words from nature</td><td>/anagram/nature</td><td class="wrap">{N} Words with NATURE</td><td>T4</td><td>words</td><td>980</td><td>7.4%</td></tr>
+              <tr><td>words with nature</td><td>/anagram/nature</td><td class="wrap">{N} Words with NATURE</td><td>T4</td><td>words</td><td>640</td><td>18.9%</td></tr>
+              <tr><td>unscramble tagging</td><td>/anagram/tagging</td><td class="wrap">Unscramble TAGGING: {N} Words with TAGGING</td><td>T1</td><td>unscramble</td><td>410</td><td>9.1%</td></tr>
+              <tr><td>epirner</td><td>/anagram/epirner</td><td class="wrap">(no suggestion - see reason)</td><td></td><td>bare</td><td>247,453</td><td>0.04%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="guide-note">Illustrative shape, not live numbers. The last row is the common case: a page whose traffic is all bare letter strings has nothing arguing for a wording, so it returns <code>insufficient_evidence</code> rather than a guess.</p>`,
+    },
+  ],
+};
+
+function renderCategoryGuide() {
+  const guide = CATEGORY_GUIDES[state.category];
+  elements.categoryGuide.hidden = !guide;
+  if (!guide) return;
+  if (state.guideTab >= guide.length) state.guideTab = 0;
+  elements.guideTabs.innerHTML = guide.map((tab, index) =>
+    `<button class="guide-tab${index === state.guideTab ? " active" : ""}" data-guide-tab="${index}" role="tab" aria-selected="${index === state.guideTab}">${tab.label}</button>`).join("");
+  elements.guidePanel.innerHTML = guide[state.guideTab].html;
+}
+
 function renderQueries() {
   const term = elements.querySearch.value.trim().toLowerCase();
   const filtered = catalog.filter((query) => (state.category === "All" || query.category === state.category) && `${query.title} ${query.summary}`.toLowerCase().includes(term));
@@ -384,7 +451,8 @@ elements.configForm.addEventListener("change", () => {
   elements.downloadFullButton.disabled = true;
   if (state.selected) renderSelectedQuery(false);
 });
-elements.categoryTabs.addEventListener("click", (event) => { const button = event.target.closest("[data-category]"); if (!button) return; state.category = button.dataset.category; renderCategories(); renderQueries(); });
+elements.categoryTabs.addEventListener("click", (event) => { const button = event.target.closest("[data-category]"); if (!button) return; state.category = button.dataset.category; state.guideTab = 0; renderCategories(); renderCategoryGuide(); renderQueries(); });
+elements.guideTabs.addEventListener("click", (event) => { const button = event.target.closest("[data-guide-tab]"); if (!button) return; state.guideTab = Number(button.dataset.guideTab); renderCategoryGuide(); });
 elements.pageScopeTabs.addEventListener("click", (event) => {
   const button = event.target.closest("[data-page-scope]");
   if (!button) return;
@@ -416,4 +484,4 @@ elements.dryRunButton.addEventListener("click", dryRun);
 elements.runQueryButton.addEventListener("click", runQuery);
 elements.downloadFullButton.addEventListener("click", () => downloadCsv(false));
 
-loadConfig(); renderPageScopes(); renderWordGroups(); renderCategories(); renderQueries(); setConnected(false);
+loadConfig(); renderPageScopes(); renderWordGroups(); renderCategories(); renderCategoryGuide(); renderQueries(); setConnected(false);
