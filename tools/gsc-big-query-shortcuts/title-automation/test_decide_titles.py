@@ -81,6 +81,21 @@ class Decisions(unittest.TestCase):
         self.assertEqual(result['current']['total'], 2800)
         self.assertEqual(result['current']['u'], .7)
 
+    def test_game_brands_are_special_not_words_from(self):
+        # 'words with friends' also matches the words-from pattern; if it is not
+        # excluded first, game traffic is counted as letter-source intent.
+        for query in ('words with friends love', 'wwf love', 'jumble love'):
+            self.assertEqual(classify(query, 'love'), 'special', query)
+
+    def test_words_of_is_not_words_from(self):
+        # 'words of X' is affirmation / encouragement / wisdom in the corpus.
+        self.assertEqual(classify('words of love', 'love'), 'other')
+
+    def test_letter_source_phrasings_still_classify(self):
+        for query in ('words from love', 'words with love', 'words using love',
+                      'words out of love', 'make words from love'):
+            self.assertEqual(classify(query, 'love'), 'words', query)
+
 
 if __name__ == '__main__':
     unittest.main()

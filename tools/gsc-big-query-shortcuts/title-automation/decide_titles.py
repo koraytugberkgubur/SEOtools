@@ -19,7 +19,9 @@ def classify(query, word):
     if w not in q.split():
         return 'other'
     # These intentions need matching content, not one of the four generic titles.
-    if re.search(r'\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten) letter\b|\b(starts? with|ends? with|meaning|definition|scrabble|wordle|crossword)\b', q):
+    # 'words with friends' also matches the words-from pattern below, so it has
+    # to be excluded here or game traffic is read as letter-source intent.
+    if re.search(r'\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten) letter\b|\b(starts? with|ends? with|meaning|definition|scrabble|wordle|crossword|jumble|words with friends|wwf)\b', q):
         return 'special'
     u = bool(re.search(r'\bunscrambl(?:e|er|ing|ed)\b', q))
     f = bool(re.search(r'\bwords? (?:from|with|using|out of)\b|\bmake words?\b', q))

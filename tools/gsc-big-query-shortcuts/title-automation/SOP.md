@@ -102,6 +102,25 @@ The output has three possible results:
 | `UNCHANGED` | The current title already matches |
 | `HOLD` | Keep the current title; the report explains why |
 
+## 5b. Or get the titles straight from BigQuery
+
+[suggest-titles.sql](suggest-titles.sql) runs the same rules inside BigQuery, so no
+CSV export or local Python is needed. Run the file once to create the functions, then:
+
+```sql
+SELECT url, current_title, proposed_title, status, reason
+FROM `PROJECT.DATASET.suggest_titles`(DATE '2026-09-21')
+WHERE status = 'PROPOSE_TEST'
+ORDER BY cur_impressions DESC;
+```
+
+It needs a `page_inventory` table holding the same fields as `pages.csv`. Output
+columns match the JSONL from the script, plus the evidence numbers behind each
+decision. It reads only.
+
+The query classifier's wording rules come from a 77,882-keyword US corpus; see
+[TITLE-QUERY-EVIDENCE.md](TITLE-QUERY-EVIDENCE.md).
+
 ## 6. Test, then automate
 
 Start with a test batch and a comparable group of pages whose titles stay unchanged. Save every old title. Keep other page changes stable during the test.
