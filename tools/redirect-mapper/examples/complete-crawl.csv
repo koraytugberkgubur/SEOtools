@@ -1,0 +1,12 @@
+URL,Status Code,Title 1,H1-1,Meta Description,Content Type
+https://example.com/old/technical-seo-checklist,404,Technical SEO Checklist,Technical SEO Checklist,Audit your technical SEO,text/html
+https://example.com/products/blue-running-shoes,404,Blue Running Shoes,Blue Running Shoes,Lightweight shoes for runners,text/html
+https://example.com/resources/technical-seo-audit-checklist,200,Technical SEO Audit Checklist,Technical SEO Checklist,A complete technical audit guide,text/html
+https://example.com/products/mens-blue-running-shoe,200,Men's Blue Running Shoe,Blue Running Shoe,Lightweight blue shoes for runners,text/html
+https://example.com/old-assets/site.css,404,,,,text/css
+https://example.com/assets/site.min.css,200,,,,text/css
+https://example.com/old-scripts/app.js,404,,,,application/javascript
+https://example.com/assets/app.min.js,200,,,,application/javascript
+https://example.com/old-fonts/brand.woff2,404,,,,font/woff2
+https://example.com/fonts/brand.woff2,200,,,,font/woff2
+https://example.com/broken%ZZ-url,404,Broken URL,,,text/html

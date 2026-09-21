@@ -1,0 +1,11 @@
+{
+  "name": "locale-qdp-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An explainable Query Deserves a Page calculator for locale SEO decisions.",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "license": "MIT"
+}

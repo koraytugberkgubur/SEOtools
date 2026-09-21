@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="robots" content="noindex, nofollow" />
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Map 404 URLs to relevant live pages with transparent fuzzy scoring.">
+  <title>Redirect Mapper — SEO 404 recovery</title>
+  <link rel="stylesheet" href="style.css?v=7">
+</head>
+<body>
+  <header>
+    <a class="brand" href="#">REDIRECT / MAP</a>
+    <span class="privacy">Runs locally in your browser</span>
+  </header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow">404 recovery workbench</p>
+      <h1>Give every lost URL<br><em>a relevant way home.</em></h1>
+      <p class="lede">Upload one crawl export. The tool separates broken and live pages by status code, compares their URLs and metadata, then exports a review-ready redirect map.</p>
+    </section>
+
+    <section class="workbench" aria-labelledby="workbench-title">
+      <div class="section-head">
+        <div><p class="eyebrow">Input</p><h2 id="workbench-title">Build the map</h2></div>
+        <button id="example" class="text-button" type="button">Use example crawl</button>
+      </div>
+      <div class="crawl-upload">
+        <input id="crawl-file" class="file-input" type="file" accept=".csv,text/csv">
+        <label class="drop-zone" for="crawl-file">
+          <span class="file-mark">CSV</span>
+          <strong>Upload crawl export</strong>
+          <small>Requires URL and status code. Title, H1 and meta description improve suggestions.</small>
+        </label>
+        <p id="crawl-file-status" class="crawl-status">No crawl loaded</p>
+        <div id="crawl-summary" class="crawl-summary" hidden>
+          <span><b id="row-count">0</b> URLs read</span>
+          <span><b id="source-count">0</b> broken pages</span>
+          <i aria-hidden="true">→</i>
+          <span><b id="target-count">0</b> live destinations</span>
+          <span><b id="ignored-count">0</b> other statuses</span>
+          <span><b id="skipped-count">0</b> malformed URLs</span>
+          <span><b id="signal-count">0</b> metadata columns</span>
+        </div>
+      </div>
+      <div class="controls">
+        <label class="threshold">Minimum score <output id="threshold-value">45</output>%
+          <input id="threshold" type="range" min="20" max="90" value="45">
+        </label>
+        <button id="map" class="primary" type="button">Create redirect suggestions</button>
+      </div>
+      <div id="progress-panel" class="progress-panel" hidden>
+        <div class="progress-copy"><span id="progress-label">Preparing URL index…</span><output id="progress-value">0%</output></div>
+        <progress id="progress" max="100" value="0">0%</progress>
+      </div>
+      <p id="message" class="message" role="status"></p>
+    </section>
+
+    <section id="results-section" class="results" hidden aria-labelledby="results-title">
+      <div class="section-head">
+        <div><p class="eyebrow">Review</p><h2 id="results-title">Redirect candidates</h2></div>
+        <button id="download" class="text-button" type="button">Download CSV</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Broken URL</th><th>Type</th><th>Best destination</th><th>Folder direction</th><th>Score</th><th>Strongest signal</th><th>Decision</th></tr></thead><tbody id="results"></tbody></table></div>
+      <p class="caution">Every 404/410 receives its closest live URL. Page URLs appear first; CSS, JS, and font files are grouped at the end. A low score still needs manual review.</p>
+      <section id="skipped-section" class="skipped-section" hidden aria-labelledby="skipped-title">
+        <h3 id="skipped-title">Skipped malformed URLs <span id="skipped-total">0</span></h3>
+        <p id="skipped-note">These rows were excluded before matching so they could not stop the redirect analysis.</p>
+        <div class="table-wrap"><table><thead><tr><th>CSV row</th><th>Raw URL</th><th>Status</th><th>Reason</th></tr></thead><tbody id="skipped-results"></tbody></table></div>
+      </section>
+    </section>
+  </main>
+  <footer><span>Open-source SEO utility</span><a href="https://github.com/KTG1/redirect-mapper" rel="noreferrer">View setup guide</a></footer>
+  <script src="app.js?v=7"></script>
+</body>
+</html>

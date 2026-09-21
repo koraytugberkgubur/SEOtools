@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="robots" content="noindex, nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Import Semrush and Ahrefs referring domains, then check new domain lists against your link inventory.">
+  <title>Link Ledger — Referring domain checker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#">LINK <span>LEDGER</span></a>
+    <div class="privacy"><i></i> Stored in this browser only</div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <p class="kicker">Referring domain inventory</p>
+      <h1>Know which links<br>you <em>already own.</em></h1>
+      <p class="lede">Import your Semrush and Ahrefs exports once. Check every prospect list against a clean, remembered domain inventory.</p>
+      <div class="inventory-count"><strong id="inventoryCount">0</strong><span>domains<br>remembered</span></div>
+    </section>
+
+    <section class="workspace" aria-label="Domain checker">
+      <nav class="steps" aria-label="Workflow steps">
+        <button class="step active" data-step="1"><b>1</b><span>Build inventory<small>Import link data</small></span></button>
+        <button class="step" data-step="2"><b>2</b><span>Check domains<small>Find the gaps</small></span></button>
+      </nav>
+
+      <div class="panel active" id="step1">
+        <div class="panel-heading">
+          <div><span class="eyebrow">Your source of truth</span><h2>Import referring domains</h2></div>
+          <button id="clearInventory" class="text-button">Clear inventory</button>
+        </div>
+        <label class="dropzone" id="importDropzone">
+          <input id="importFile" type="file" accept=".csv,.tsv,.txt" multiple>
+          <span class="upload-mark">↗</span>
+          <strong>Drop Semrush or Ahrefs exports here</strong>
+          <span>or choose CSV, TSV, or TXT files</span>
+          <small>We detect “Referring Domain”, “Domain”, “Source URL”, and similar columns.</small>
+        </label>
+        <div class="import-summary" id="importSummary" hidden></div>
+        <div class="panel-actions"><span>Imports merge automatically and duplicates are removed.</span><button class="primary" data-next="2">Check a list <b>→</b></button></div>
+      </div>
+
+      <div class="panel" id="step2">
+        <div class="panel-heading">
+          <div><span class="eyebrow">Prospect check</span><h2>Paste or upload domains</h2></div>
+          <button id="backToImport" class="text-button">+ Add link data</button>
+        </div>
+        <div class="check-grid">
+          <div>
+            <label for="candidateText">Domains to check</label>
+            <textarea id="candidateText" placeholder="example.com&#10;https://another-domain.com/page&#10;www.third-site.org"></textarea>
+            <label class="file-button">Upload a list<input id="candidateFile" type="file" accept=".csv,.tsv,.txt"></label>
+            <button id="checkButton" class="primary wide">Check domains <b>→</b></button>
+          </div>
+          <div class="receipt empty" id="results" aria-live="polite">
+            <div class="receipt-head"><span>LINK LEDGER / CHECK</span><span id="receiptDate"></span></div>
+            <div class="empty-message"><strong>Results print here</strong><span>Run a check to separate domains you have from the links you still need.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="domain-utils.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

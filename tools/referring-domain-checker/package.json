@@ -1,0 +1,12 @@
+{
+  "name": "referring-domain-checker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A local-first tool for comparing prospect domains against Semrush and Ahrefs referring-domain exports.",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "node scripts/build.js",
+    "test": "node --test"
+  },
+  "license": "MIT"
+}

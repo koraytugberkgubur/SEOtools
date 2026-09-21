@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+redirect-map.csv
+redirect-audit.csv

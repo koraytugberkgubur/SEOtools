@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Find queries where your homepage and a sub-page compete in Google Search.">
+  <title>Split Signal — GSC cannibalization finder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="#">SPLIT<span>/</span>SIGNAL</a>
+    <div class="privacy"><i></i> Runs in your browser</div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Google Search Console · query overlap</p>
+      <h1>Find where your homepage<br><em>fights itself.</em></h1>
+      <p class="lede">Surface queries earning impressions for both your homepage and a sub-page. Your Search Console data is processed locally and is never stored.</p>
+    </section>
+
+    <section class="workspace" aria-label="Cannibalization analysis">
+      <aside class="controls">
+        <div class="step">
+          <span class="step-label">01 / CONNECT</span>
+          <label for="clientId">Google OAuth client ID</label>
+          <div class="input-action">
+            <input id="clientId" type="text" autocomplete="off" placeholder="…apps.googleusercontent.com">
+            <button id="connectButton" class="button dark">Connect</button>
+          </div>
+          <p class="hint">Stored only in this browser. Add this page URL as an authorized JavaScript origin.</p>
+        </div>
+
+        <div class="step">
+          <span class="step-label">02 / SCOPE</span>
+          <label for="property">Search Console property</label>
+          <select id="property" disabled><option>Connect Google first</option></select>
+
+          <label for="checkType">Check template</label>
+          <select id="checkType">
+            <option value="homepage">Homepage vs sub-pages</option>
+            <option value="overall">Overall cannibalization</option>
+            <option value="fragmentation">3+ page fragmentation</option>
+          </select>
+          <p id="checkHint" class="hint">Queries shared by the homepage and any sub-page.</p>
+
+          <label for="homepage">Homepage URL</label>
+          <input id="homepage" type="url" placeholder="https://example.com/" disabled>
+
+          <div class="date-grid">
+            <div><label for="startDate">Start date</label><input id="startDate" type="date"></div>
+            <div><label for="endDate">End date</label><input id="endDate" type="date"></div>
+          </div>
+
+          <label for="threshold">Minimum mutual impressions <output id="thresholdValue">10</output></label>
+          <input id="threshold" type="range" min="1" max="500" value="10">
+        </div>
+
+        <button id="analyzeButton" class="button signal" disabled>Analyze overlap <span>→</span></button>
+        <div id="progressPanel" class="progress-panel" hidden>
+          <div class="progress-copy"><span id="progressLabel">Preparing…</span><strong id="progressPercent">0%</strong></div>
+          <div class="progress-track" role="progressbar" aria-label="Analysis progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="progressFill"></i></div>
+        </div>
+        <p id="status" class="status" role="status" aria-live="polite">Waiting for connection.</p>
+      </aside>
+
+      <section class="results" aria-live="polite">
+        <div class="radar" id="emptyState">
+          <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
+          <div class="page-dot home-dot"><b>H</b><span>Homepage</span></div>
+          <div class="page-dot sub-dot"><b>S</b><span>Sub-page</span></div>
+          <div class="collision"><span>QUERY</span></div>
+          <p>Overlapping search intent<br>will appear here.</p>
+        </div>
+
+        <div id="report" class="report" hidden>
+          <div class="report-head">
+            <div><span class="step-label">RESULTS <b id="sampleBadge" class="sample-badge">Example data</b></span><h2><strong id="resultCount">0</strong> collisions found</h2></div>
+            <div class="report-actions">
+              <div class="view-switch" aria-label="Results view">
+                <button class="view-button active" data-view="map" aria-pressed="true">Query map</button>
+                <button class="view-button" data-view="scatter" aria-pressed="false">Scatter</button>
+                <button class="view-button" data-view="table" aria-pressed="false">Table</button>
+              </div>
+              <button id="downloadButton" class="button outline">Download CSV</button>
+            </div>
+          </div>
+          <div id="mapView" class="map-view">
+            <div class="map-axis"><span id="primaryAxis">Homepage leads</span><b>Impression split</b><span id="secondaryAxis">Sub-page leads</span></div>
+            <div id="queryMap" class="query-map" aria-label="Hoverable query collision map"></div>
+            <p class="map-note">Point size = mutual impressions · Color = common impression percentage · Showing the top 80 collisions</p>
+          </div>
+          <div id="scatterView" class="scatter-view" hidden>
+            <div class="scatter-y-label" id="scatterYLabel">Sub-page impressions ↑</div>
+            <div id="scatterPlot" class="scatter-plot" aria-label="Interactive impression collision scatter chart">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <line class="parity-line" x1="7" y1="93" x2="95" y2="5"></line>
+                <line class="axis-line" x1="7" y1="5" x2="7" y2="93"></line>
+                <line class="axis-line" x1="7" y1="93" x2="95" y2="93"></line>
+              </svg>
+              <span class="parity-label">Equal impressions</span>
+              <div id="scatterPoints"></div>
+            </div>
+            <div class="scatter-x-label" id="scatterXLabel">Homepage impressions →</div>
+            <p class="map-note">Log scale · Point size = mutual impressions · Click a point to pin its details</p>
+          </div>
+          <div id="mapTooltip" class="map-tooltip" role="tooltip" hidden></div>
+          <div id="tableView" class="table-wrap" hidden>
+            <table>
+              <thead><tr><th>Query</th><th id="secondaryPageHead">Sub-page</th><th id="primaryImpHead">Home imp.</th><th id="secondaryImpHead">Page imp.</th><th>Mutual</th><th>Common %</th><th id="primaryShareHead">Home share</th></tr></thead>
+              <tbody id="resultsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer><span>Read-only GSC access</span><span>No server · No database · No tracking</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>
