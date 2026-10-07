@@ -20,6 +20,7 @@ want the history back.
 | `tools/gsc-big-query-shortcuts` | Base BigQuery query shortcuts for GSC bulk exports |
 | `tools/gsc-bq-shortcuts-allergy` | GSC/BigQuery shortcuts, allergy vertical |
 | `tools/gsc-bq-shortcuts-casino` | GSC/BigQuery shortcuts, casino vertical |
+| `tools/gsc-bq-shortcuts-casino-v2` | Domain-schema BigQuery explorer and 12 performance reports |
 | `tools/gsc-bq-shortcuts-law` | GSC/BigQuery shortcuts, legal vertical |
 | `tools/gsc-bq-shortcuts-xometry` | GSC/BigQuery shortcuts, industrial/manufacturing vertical |
 | `tools/gsc-cannibalization-tool` | Detects keyword cannibalization from Search Console API data |
@@ -29,7 +30,7 @@ want the history back.
 | `tools/referring-domain-checker` | Checks and classifies referring domains |
 | `tools/thomasnet-supplier-search` | Supplier search tooling |
 
-All twelve are published at <https://koraytugberkgubur.github.io/SEOtools/>.
+The tool directory is published at <https://koraytugberkgubur.github.io/SEOtools/>.
 
 ## Not included
 
