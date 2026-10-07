@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=2" />
+    <link rel="stylesheet" href="styles.css?v=site-url-3" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -26,9 +26,9 @@
     <main id="top">
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">13 available columns · domain performance</p>
-          <h1>Explore your domains.<br /><em>Find the next opportunity.</em></h1>
-          <p class="hero-intro">Select source columns, filter your portfolio, and run 12 domain-level analyses. URL and query reports need a source that includes those fields.</p>
+          <p class="eyebrow">Site and URL · Search Console performance</p>
+          <h1>Explore sites and URLs.<br /><em>Find the next opportunity.</em></h1>
+          <p class="hero-intro">Keep site totals and URL detail in separate tabs. Explore pages, search terms, and performance using the matching source table.</p>
         </div>
         <div class="signal-map" aria-label="A diagram showing Search Console data flowing through BigQuery into a results table">
           <div class="signal-node source"><span>01</span>Domain data</div>
@@ -43,6 +43,10 @@
         </div>
       </section>
 
+      <div class="category-tabs source-tabs" id="sourceTabs" role="tablist" aria-label="Analysis source">
+        <button type="button" class="category-tab active" role="tab" aria-selected="true" data-mode="site">Site</button>
+        <button type="button" class="category-tab" role="tab" aria-selected="false" data-mode="url">URL</button>
+      </div>
       <section class="workspace">
         <aside class="setup-panel" aria-labelledby="setupTitle">
           <div class="panel-heading">
@@ -88,7 +92,12 @@
               <label>Network ID<input id="networkIdFilter"></label>
               <label>Site language<input id="siteLanguageFilter" placeholder="en"></label>
               <label>Site country<input id="siteCountryFilter" placeholder="US"></label>
-              <small>Text filters use exact values, ignoring case.</small>
+              <div id="urlFilters" hidden>
+                <label>Page URL<input id="pageFilter" placeholder="https://example.com/page"></label>
+                <label>Search term<input id="queryFilter" placeholder="Exact search term"></label>
+                <label>Resource type<input id="resourceTypeFilter" placeholder="TaxonomyItem"></label>
+              </div>
+              <small>Filters match exact values. Page URLs and search terms preserve case; other text ignores case.</small>
             </details>
             <div class="form-actions">
               <button class="primary-button" id="connectButton" type="button">Connect Google</button>
@@ -123,7 +132,7 @@
             <h3 id="columnTitle">Columns for source detail</h3>
             <p>Select columns for the first report. The other reports return their own calculated fields.</p>
             <div id="columnOptions" class="column-options" form="configForm"></div>
-            <p class="source-note">Available: domain, date, clicks, impressions, position and eight supporting fields. URL and query are unavailable in this schema.</p>
+            <p class="source-note" id="sourceNote">Site reports use 13 columns. URL reports use 17 columns, including page and query.</p>
           </section>
           <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Query categories"></div>
           <div class="query-grid" id="queryGrid"></div>
@@ -158,8 +167,8 @@
     </main>
 
     <div class="toast" id="toast" role="status"></div>
-    <script src="query-engine.js?v=2"></script>
-    <script src="queries.js?v=2"></script>
-    <script src="app.js?v=2"></script>
+    <script src="query-engine.js?v=site-url-3"></script>
+    <script src="queries.js?v=site-url-3"></script>
+    <script src="app.js?v=site-url-3"></script>
   </body>
 </html>

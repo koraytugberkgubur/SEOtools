@@ -1,5 +1,7 @@
-const catalog = window.QUERY_CATALOG || [];
+let catalog = window.QUERY_CATALOG || [];
 const state = {
+  mode: "site",
+  sources: {},
   token: null,
   tokenClient: null,
   selected: null,
@@ -26,27 +28,82 @@ const STORAGE_KEY = "gsc-bq-casino-domain-v2";
 const RENDER_ROW_LIMIT = 1000;
 const AUTO_DOWNLOAD_ROW_LIMIT = 5000;
 const QUERY_PAGE_SIZE = 10000;
-const configFields = ["clientId", "projectId", "location", "dataset", "tableName", "positionBase", "startDate", "endDate", "domainFilter", "countryFilter", "deviceFilter", "siteIdFilter", "verticalIdFilter", "networkIdFilter", "siteLanguageFilter", "siteCountryFilter"];
+const configFields = ["clientId", "projectId", "location", "dataset", "tableName", "positionBase", "startDate", "endDate", "domainFilter", "countryFilter", "deviceFilter", "siteIdFilter", "verticalIdFilter", "networkIdFilter", "siteLanguageFilter", "siteCountryFilter", "pageFilter", "queryFilter", "resourceTypeFilter"];
 
 configFields.forEach((key) => { elements[key] = document.getElementById(key); });
 
-function loadConfig() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    configFields.forEach((key) => { if (saved[key]) elements[key].value = saved[key]; });
-    if (Array.isArray(saved.columns)) document.querySelectorAll("[name=outputColumn]").forEach((input) => { input.checked = saved.columns.includes(input.value); });
-  } catch { /* ignore malformed local settings */ }
+const sourceFields = ["projectId", "dataset", "tableName", "location", "positionBase"];
+function renderColumns(selected) {
+  const columns = window.DomainQueries.columnsFor(state.mode);
+  const chosen = selected || columns;
+  document.getElementById("columnOptions").innerHTML = columns.map((name) => `<label class="column-choice"><input type="checkbox" name="outputColumn" value="${name}" form="configForm" ${chosen.includes(name) ? "checked" : ""}> ${name}</label>`).join("");
 }
-
 function getConfig() {
   const config = Object.fromEntries(configFields.map((key) => [key, elements[key].value.trim()]));
+  config.mode = state.mode;
   config.location ||= "US";
   config.columns = [...document.querySelectorAll("[name=outputColumn]:checked")].map((input) => input.value);
   return config;
 }
-
+function rememberSource() {
+  const config = getConfig();
+  state.sources[state.mode] = Object.fromEntries([...sourceFields, "columns"].map((key) => [key, config[key]]));
+}
 function saveConfig() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(getConfig()));
+  rememberSource();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...getConfig(), activeMode: state.mode, sources: state.sources }));
+}
+function showSource() {
+  const source = state.sources[state.mode] || {};
+  sourceFields.forEach((key) => { elements[key].value = source[key] || (key === "location" ? "US" : key === "positionBase" ? "1" : ""); });
+  renderColumns(source.columns);
+  catalog = state.mode === "url" ? window.URL_QUERY_CATALOG : window.QUERY_CATALOG;
+  document.querySelectorAll("[data-mode]").forEach((button) => {
+    button.setAttribute("aria-selected", String(button.dataset.mode === state.mode));
+    button.classList.toggle("active", button.dataset.mode === state.mode);
+  });
+  document.getElementById("urlFilters").hidden = state.mode !== "url";
+  document.getElementById("setupTitle").textContent = `${state.mode === "url" ? "URL" : "Site"} table connection`;
+  document.getElementById("sourceNote").textContent = state.mode === "url"
+    ? "17 columns. page contains the URL; query contains the search term. URL reports use only this table."
+    : "13 columns. Site reports summarize domains. Use the URL tab for pages and search terms.";
+  elements.querySearch.placeholder = `Filter ${catalog.length} reports…`;
+  elements.querySearch.value = "";
+  state.category = "All";
+  state.selected = catalog[0];
+  state.baseRows = []; state.rows = []; state.fields = []; state.resultStats = null;
+  elements.downloadFullButton.disabled = true;
+  renderCategories(); renderQueries(); renderSelectedQuery(false);
+}
+function switchMode(mode) {
+  if (state.busy || !["site", "url"].includes(mode) || mode === state.mode) return;
+  rememberSource();
+  if (!state.sources[mode]) {
+    const current = state.sources[state.mode];
+    state.sources[mode] = { projectId: current.projectId, dataset: current.dataset, location: current.location, positionBase: current.positionBase, tableName: "" };
+  }
+  state.mode = mode;
+  showSource(); saveConfig();
+}
+function loadConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    configFields.forEach((key) => { if (saved[key]) elements[key].value = saved[key]; });
+    // Migrate the deployed one-table configuration into the Site profile.
+    state.sources = saved.sources || { site: Object.fromEntries([...sourceFields, "columns"].map((key) => [key, saved[key] || (key === "columns" ? window.DomainQueries.COLUMNS : "")])) };
+    state.mode = saved.activeMode === "url" ? "url" : "site";
+  } catch { state.sources = {}; }
+  showSource();
+}
+
+async function checkSource(config) {
+  // Tables metadata validates the chosen source without scanning performance rows.
+  const url = `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(config.projectId)}/datasets/${encodeURIComponent(config.dataset)}/tables/${encodeURIComponent(config.tableName)}`;
+  const metadata = await authorizedFetch(url);
+  window.DomainQueries.validateSchema(metadata.schema?.fields, config.mode);
+  if (metadata.location && metadata.location.toLowerCase() !== config.location.toLowerCase()) {
+    throw new Error(`This table is in ${metadata.location}. Set this tab's location to ${metadata.location}.`);
+  }
 }
 
 function validateIdentifier(value, label) {
@@ -159,7 +216,7 @@ function selectQuery(id) {
 
 function renderSelectedQuery(scroll = true) {
   elements.resultTitle.textContent = state.selected.title;
-  elements.resultStatus.textContent = `${state.selected.category} · Domain analysis`;
+  elements.resultStatus.textContent = `${state.selected.category} · ${state.mode === "url" ? "URL" : "Site"} analysis`;
   let sql = "";
   try { sql = hydrateSql(state.selected); } catch (error) { sql = `-- ${error.message}\n-- Fill in the source fields to prepare SQL. Google sign-in is only needed to execute it.`; }
   elements.queryDetail.innerHTML = `
@@ -178,7 +235,7 @@ function escapeHtml(value) {
 
 function setBusy(busy) {
   state.busy = busy;
-  document.querySelectorAll("#configForm input, #configForm select, #columnOptions input, #queryGrid button").forEach((input) => { input.disabled = busy; });
+  document.querySelectorAll("#configForm input, #configForm select, #columnOptions input, #queryGrid button, [data-mode]").forEach((input) => { input.disabled = busy; });
   elements.runQueryButton.disabled = busy;
   elements.dryRunButton.disabled = busy;
 }
@@ -187,10 +244,12 @@ async function dryRun() {
   if (!state.selected) return;
   const config = getConfig();
   try {
-    setBusy(true); elements.resultStatus.textContent = "Estimating bytes…";
+    setBusy(true); elements.resultStatus.textContent = "Checking source and estimating bytes…";
+    const sql = hydrateSql(state.selected);
+    await checkSource(config);
     const payload = await authorizedFetch(`https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(config.projectId)}/jobs`, {
       method: "POST",
-      body: JSON.stringify({ jobReference: { projectId: config.projectId, location: config.location }, configuration: { dryRun: true, query: { query: hydrateSql(state.selected), useLegacySql: false } } }),
+      body: JSON.stringify({ jobReference: { projectId: config.projectId, location: config.location }, configuration: { dryRun: true, query: { query: sql, useLegacySql: false } } }),
     });
     const bytes = Number(payload.statistics?.totalBytesProcessed || 0);
     elements.resultStatus.textContent = "Cost estimate ready";
@@ -205,13 +264,16 @@ async function runQuery() {
   try {
     validateConfig(config); saveConfig();
     setBusy(true);
+    const sql = hydrateSql(state.selected);
+    elements.resultStatus.textContent = "Checking source schema…";
+    await checkSource(config);
     elements.downloadFullButton.disabled = true; state.rows = [];
     elements.resultStatus.textContent = "Running in BigQuery…";
     elements.resultMeta.hidden = true; elements.tableShell.hidden = true; elements.emptyState.hidden = false;
     elements.emptyState.innerHTML = '<div class="empty-glyph">RUN<br />•••</div><p>BigQuery is processing the selected shortcut.</p>';
     let payload = await authorizedFetch(`https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(config.projectId)}/queries`, {
       method: "POST",
-      body: JSON.stringify({ query: hydrateSql(state.selected), useLegacySql: false, location: config.location, maxResults: QUERY_PAGE_SIZE, timeoutMs: 20000 }),
+      body: JSON.stringify({ query: sql, useLegacySql: false, location: config.location, maxResults: QUERY_PAGE_SIZE, timeoutMs: 20000 }),
     });
     while (!payload.jobComplete) {
       await new Promise((resolve) => setTimeout(resolve, 1100));
@@ -288,7 +350,7 @@ function downloadCsv(automatic = false) {
   const csv = [headers, ...state.rows.map((row) => headers.map((header) => row[header]))]
     .map((row) => row.map((value) => `"${csvSafe(value).replaceAll('"', '""')}"`).join(",")).join("\n");
   const anchor = document.createElement("a"); anchor.href = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
-  anchor.download = `${state.selected.id}-${state.selected.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`; anchor.click();
+  anchor.download = `${state.mode}-${state.selected.id}-${state.selected.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`; anchor.click();
   window.setTimeout(() => URL.revokeObjectURL(anchor.href), 1000);
   showToast(automatic ? `The ${state.rows.length.toLocaleString()}-row result was too large to render fully, so its CSV download started automatically.` : `Downloading all ${state.rows.length.toLocaleString()} rows.`);
 }
@@ -310,12 +372,11 @@ elements.dryRunButton.addEventListener("click", dryRun);
 elements.runQueryButton.addEventListener("click", runQuery);
 elements.downloadFullButton.addEventListener("click", () => downloadCsv(false));
 
-document.getElementById("columnOptions").innerHTML = window.DomainQueries.COLUMNS.map((name) => `<label class="column-choice"><input type="checkbox" name="outputColumn" value="${name}" form="configForm" checked> ${name}</label>`).join("");
-loadConfig(); renderCategories(); renderQueries(); setConnected(false);
-
-state.selected = catalog[0];
-renderQueries();
-renderSelectedQuery(false);
+document.getElementById("sourceTabs").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-mode]");
+  if (button) switchMode(button.dataset.mode);
+});
+loadConfig(); setConnected(false);
 
 document.getElementById("columnOptions").addEventListener("change", () => {
   saveConfig();
